@@ -2,7 +2,7 @@ services:
   - type: web
     name: road-readiness-ui
     runtime: python
-    plan: starter
+    plan: Hobby
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: gunicorn --workers 1 --threads 4 --timeout 1800 --bind 0.0.0.0:$PORT pipeline.readiness_ui_server:app
     autoDeploy: true

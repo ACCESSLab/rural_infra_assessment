@@ -1,3 +1,6 @@
+## Render deployment note:
+## use Python 3.11.x (set `PYTHON_VERSION=3.11.11` or commit `.python-version`).
+
 Flask==3.0.3
 gunicorn==22.0.0
 
@@ -11,8 +14,9 @@ folium==0.17.0
 branca==0.7.2
 geopandas==1.0.1
 shapely==2.0.6
-pyogrio==0.10.0
 pyproj==3.6.1
+# Avoid source-build failure on unsupported Python runtimes (e.g. 3.14+ on Render).
+pyogrio==0.10.0 ; python_version < "3.13"
 
 markdown2==2.5.1
 weasyprint==62.3

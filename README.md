@@ -2,6 +2,8 @@
 
 Deployment-ready subset for Render.
 
+Python runtime is pinned to `3.11.11` via `.python-version` to avoid geospatial build failures on newer runtimes.
+
 Included:
 - Flask UI + re-evaluation pipeline scripts
 - Render deployment files (`requirements.txt`, `Procfile`, `render.yaml`)
