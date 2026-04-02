@@ -644,17 +644,56 @@ def _reweight_worker(run_id: str, params: Dict[str, str]) -> None:
 
         fused_dir = Path(str(params.get("source_fused_dir", "results/fused")))
         lane_images_dir = Path(str(params.get("source_lane_images_dir", "results/lane/images")))
+        overlay_dir = Path(str(params.get("overlay_dir", "results/readiness/keypoint_overlays")))
         if not fused_dir.is_absolute():
             fused_dir = (REPO_ROOT / fused_dir).resolve()
         if not lane_images_dir.is_absolute():
             lane_images_dir = (REPO_ROOT / lane_images_dir).resolve()
+        if not overlay_dir.is_absolute():
+            overlay_dir = (REPO_ROOT / overlay_dir).resolve()
+
+        def _dir_nonempty(path: Path) -> bool:
+            if not path.exists() or not path.is_dir():
+                return False
+            try:
+                next(path.iterdir())
+                return True
+            except StopIteration:
+                return False
+            except Exception:
+                return False
+
         if not fused_dir.exists():
             raise FileNotFoundError(f"Source fused dir not found: {fused_dir}")
-        if not lane_images_dir.exists():
-            raise FileNotFoundError(f"Source lane images dir not found: {lane_images_dir}")
-        if not any(lane_images_dir.iterdir()):
-            raise FileNotFoundError(f"Source lane images dir is empty: {lane_images_dir}")
 
+        if not _dir_nonempty(lane_images_dir):
+            archived_lane_dir = (archived / "lane" / "images") if archived is not None else None
+            archived_overlay_dir = (archived / "readiness" / "keypoint_overlays") if archived is not None else None
+            if archived_lane_dir is not None and _dir_nonempty(archived_lane_dir):
+                lane_images_dir = archived_lane_dir.resolve()
+                _append_log(f"Lane images not found in source; using archived lane images: {lane_images_dir}")
+            elif _dir_nonempty(overlay_dir):
+                # Use overlay images as static evidence when raw lane frames are unavailable.
+                lane_images_dir = overlay_dir.resolve()
+                _append_log(
+                    "Lane images not found in source; using overlay images as evidence source: "
+                    f"{lane_images_dir}"
+                )
+            elif archived_overlay_dir is not None and _dir_nonempty(archived_overlay_dir):
+                overlay_dir = archived_overlay_dir.resolve()
+                lane_images_dir = archived_overlay_dir.resolve()
+                _append_log(
+                    "Lane images not found in source; using archived overlay images as evidence source: "
+                    f"{lane_images_dir}"
+                )
+            else:
+                _append_log(
+                    "Lane images not found; continuing re-evaluation without key-point image evidence. "
+                    f"Missing path: {lane_images_dir}"
+                )
+
+        # Keep the selected overlay path for readiness generation.
+        params["overlay_dir"] = overlay_dir.as_posix()
         preserve = [fused_dir, lane_images_dir]
         cleared = _clear_current_outputs(preserve_dirs=preserve)
         _append_log(
