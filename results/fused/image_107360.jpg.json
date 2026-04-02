@@ -1,0 +1,48 @@
+{
+  "image": "image_107360.jpg",
+  "frame_index": 107360,
+  "timestamp_ns": 1749052516672374514,
+  "gps": {
+    "timestamp_ns": 1749052516658992784,
+    "lat": 36.14977956544743,
+    "lon": -79.74046685414189,
+    "hgt": 261.22826080489904,
+    "lat_stdev": 1.4072113037109375,
+    "lon_stdev": 1.0950446128845215,
+    "hgt_stdev": 3.47995662689209,
+    "num_svs": 22,
+    "num_sol_svs": 9,
+    "hdop": null,
+    "vdop": null,
+    "undulation": -32.599998474121094,
+    "diff_age": 8.0,
+    "sol_age": 0.0
+  },
+  "connectivity": {
+    "avg_d_mbps": 418.798,
+    "avg_u_mbps": 16.535,
+    "avg_latency_ms": 23.0,
+    "avg_download_latency_ms": 23.0,
+    "avg_upload_latency_ms": 23.0,
+    "tests": 3,
+    "source": "nearest"
+  },
+  "connectivity_error": null,
+  "lane": {
+    "image": "image_107360.jpg",
+    "results": [
+      {
+        "thr": "0.25",
+        "curves": []
+      },
+      {
+        "thr": "0.3",
+        "curves": []
+      },
+      {
+        "thr": "0.4",
+        "curves": []
+      }
+    ]
+  }
+}

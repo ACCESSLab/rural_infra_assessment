@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: road-readiness-ui
+    runtime: python
+    plan: starter
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn --workers 1 --threads 4 --timeout 1800 --bind 0.0.0.0:$PORT pipeline.readiness_ui_server:app
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: PUBLIC_MODE
+        value: "true"
+      - key: ENABLE_FULL_PIPELINE
+        value: "false"
+      - key: ENABLE_REEVALUATION
+        value: "true"
+      - key: ENABLE_REPORT_REGEN
+        value: "false"
+      - key: ENABLE_FS_BROWSER
+        value: "false"
+      - key: APP_API_TOKEN
+        sync: false
+      - key: MAPBOX_TOKEN
+        sync: false

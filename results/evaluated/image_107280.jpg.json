@@ -1,0 +1,241 @@
+{
+  "image": "image_107280.jpg",
+  "frame_index": 107280,
+  "timestamp_ns": 1749052514036254040,
+  "gps": {
+    "timestamp_ns": 1749052513957617982,
+    "lat": 36.149786514084774,
+    "lon": -79.74042920736075,
+    "hgt": 261.527526200749,
+    "lat_stdev": 1.5385798215866089,
+    "lon_stdev": 1.234269618988037,
+    "hgt_stdev": 3.8374528884887695,
+    "num_svs": 21,
+    "num_sol_svs": 9,
+    "hdop": null,
+    "vdop": null,
+    "undulation": -32.599998474121094,
+    "diff_age": 5.0,
+    "sol_age": 0.0
+  },
+  "connectivity": {
+    "avg_d_mbps": 418.798,
+    "avg_u_mbps": 16.535,
+    "avg_latency_ms": 23.0,
+    "avg_download_latency_ms": 23.0,
+    "avg_upload_latency_ms": 23.0,
+    "tests": 3,
+    "source": "nearest"
+  },
+  "connectivity_error": null,
+  "evaluation": {
+    "lane": {
+      "score": 0.5,
+      "valid_lane_lines": 1,
+      "selected_threshold": 0.25,
+      "geometry_space": "warped_px",
+      "best_threshold_detail": {
+        "threshold": 0.25,
+        "selected_curves": [
+          [
+            222.347,
+            159.84,
+            212.958,
+            157.662,
+            203.986,
+            155.59,
+            195.36,
+            153.615,
+            187.02,
+            151.732,
+            178.91,
+            149.933,
+            170.979,
+            148.215,
+            163.179,
+            146.57,
+            155.51,
+            144.995,
+            148.048,
+            143.485,
+            140.87,
+            142.037,
+            134.05,
+            140.646,
+            127.654,
+            139.309,
+            121.743,
+            138.023,
+            116.373,
+            136.786,
+            111.535,
+            135.594,
+            107.169,
+            134.446,
+            103.214,
+            133.338,
+            99.6131,
+            132.269,
+            96.315,
+            131.236,
+            93.2709,
+            130.238,
+            90.4365,
+            129.274,
+            87.7814,
+            128.341,
+            85.2827,
+            127.438,
+            82.9191,
+            126.563,
+            80.6704,
+            125.716,
+            78.5177,
+            124.894,
+            76.4433,
+            124.098,
+            76.4433,
+            124.098
+          ],
+          [
+            614.058,
+            210.612,
+            592.153,
+            205.261,
+            571.46,
+            200.308,
+            551.552,
+            195.711,
+            532.287,
+            191.431,
+            513.664,
+            187.438,
+            495.791,
+            183.704,
+            478.792,
+            180.204,
+            475.508,
+            179.53
+          ]
+        ],
+        "curves_with_geometry": 2,
+        "valid_curves_before_separation": 1,
+        "strict_valid_curves_before_separation": 1,
+        "pairs_evaluated": 0,
+        "pairs_meeting_separation": 0,
+        "strict_pairs_evaluated": 0,
+        "strict_pairs_meeting_separation": 0,
+        "strict_valid_lane_lines": 1,
+        "length_check": {
+          "min_length_m": 180.0,
+          "pass_count": 1,
+          "total_count": 2,
+          "pass_rate": 0.5,
+          "stats_m": {
+            "count": 2,
+            "min": 83.44350766255245,
+            "median": 216.76938573220625,
+            "max": 350.09526380186
+          }
+        },
+        "curvature_check": {
+          "max_curvature_1pm": 0.1,
+          "soft_max_curvature_1pm": 0.18000000000000002,
+          "pass_count": 2,
+          "soft_pass_count": 2,
+          "total_count": 2,
+          "pass_rate": 1.0,
+          "soft_pass_rate": 1.0,
+          "stats_1pm": {
+            "count": 2,
+            "min": 0.0005505886537170801,
+            "median": 0.0010440680244650858,
+            "max": 0.0015375473952130914
+          }
+        },
+        "separation_check": {
+          "min_separation_m": 2.5,
+          "pairs_meeting_separation": 0,
+          "pairs_evaluated": 0,
+          "pass_rate": 0.0,
+          "stats_m": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "max": null
+          }
+        },
+        "strict_separation_check": {
+          "min_separation_m": 2.5,
+          "pairs_meeting_separation": 0,
+          "pairs_evaluated": 0,
+          "pass_rate": 0.0,
+          "stats_m": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "max": null
+          }
+        },
+        "curves_total": 2
+      }
+    },
+    "gps": {
+      "score": 1.0,
+      "er": 1.9724729046935867,
+      "lat_stdev": 1.5385798215866089,
+      "lon_stdev": 1.234269618988037
+    },
+    "connectivity": {
+      "score": 0.75,
+      "subscores": {
+        "avg_d_mbps": 1.0,
+        "avg_u_mbps": 0.25,
+        "avg_download_latency_ms": 0.75,
+        "avg_upload_latency_ms": 1.0
+      },
+      "metrics": {
+        "avg_d_mbps": 418.798,
+        "avg_u_mbps": 16.535,
+        "avg_download_latency_ms": 23.0,
+        "avg_upload_latency_ms": 23.0
+      }
+    },
+    "weights": {
+      "w1": 0.6,
+      "w2": 0.4,
+      "k1": 1.0,
+      "k2": 0.0,
+      "k3": 0.0,
+      "m1": 0.5,
+      "m2": 0.4,
+      "m3": 0.1
+    },
+    "overall_score": 0.6100000000000001,
+    "overall_score_details": {
+      "formula": "overall_score = w1*physical_score + w2*digital_score",
+      "physical_contribution": {
+        "weight": 0.6,
+        "score": 0.5,
+        "weighted_score": 0.3
+      },
+      "digital_contribution": {
+        "weight": 0.4,
+        "score": 0.775,
+        "weighted_score": 0.31000000000000005
+      },
+      "components": {
+        "physical_infra_score": 0.3,
+        "digital_infra_score": 0.31000000000000005,
+        "physical_score": 0.5,
+        "digital_score": 0.775,
+        "lane_score": 0.5,
+        "pavement_score": 0.0,
+        "traffic_sign_score": 0.0,
+        "hd_maps_score": 0.0,
+        "connectivity_score": 0.75,
+        "gps_score": 1.0
+      }
+    }
+  }
+}

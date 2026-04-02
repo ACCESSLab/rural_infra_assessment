@@ -1,0 +1,11 @@
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*.so
+
+# Local runtime outputs
+results/ui_runtime/
+
+# Deployment branch excludes (not needed on public Render deployment)
+lane/
+pipeline/process_bag_pipeline.py

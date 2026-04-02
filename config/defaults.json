@@ -1,0 +1,37 @@
+{
+  "bag_file": "",
+  "lane": {
+    "model_path": "lane/model/lane_seg_model_onnx.onnx",
+    "output_dir": "results/lane",
+    "bag_file": "",
+    "seg_thresholds": [0.25, 0.3, 0.4],
+    "cluster_distance_threshold": 50.0,
+    "cluster_theta_threshold": 165.0,
+    "image_width": 640,
+    "image_height": 384,
+    "frame_stride": 10
+  },
+  "connectivity": {
+    "cache_dir": "connectivity/data_cache",
+    "service_type": "mobile",
+    "year_offset_from_current": 1,
+    "quarter": 4
+  },
+  "gps": {
+    "bag_file": "",
+    "output_file": "results/gps/gps_data_summary.json",
+    "bestpos_topic": "/novatel/oem7/bestpos"
+  },
+  "pipeline": {
+    "bag_file": "",
+    "output_dir": "results/fused",
+    "output_mode": "archive",
+    "archive_root": "results/archive",
+    "frame_stride": 10,
+    "run_lane_detector": true,
+    "lane_executable": "lane/build/main_lane",
+    "image_topics": ["/camera/image_compressed", "/camera/image_raw"],
+    "gps_topic": "/novatel/oem7/bestpos",
+    "gps_topics": ["/novatel/oem7/bestpos", "/bestpos"]
+  }
+}

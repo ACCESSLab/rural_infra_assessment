@@ -1,0 +1,243 @@
+{
+  "image": "image_22720.jpg",
+  "frame_index": 22720,
+  "timestamp_ns": 1749049717227639014,
+  "gps": {
+    "timestamp_ns": 1749049717158414368,
+    "lat": 36.289483371130004,
+    "lon": -79.73496594083656,
+    "hgt": 253.4325944883749,
+    "lat_stdev": 1.3434888124465942,
+    "lon_stdev": 1.1476030349731445,
+    "hgt_stdev": 2.967487335205078,
+    "num_svs": 20,
+    "num_sol_svs": 8,
+    "hdop": null,
+    "vdop": null,
+    "undulation": -32.79999923706055,
+    "diff_age": 4.0,
+    "sol_age": 0.0
+  },
+  "connectivity": {
+    "avg_d_mbps": 619.882,
+    "avg_u_mbps": 11.953,
+    "avg_latency_ms": 32.0,
+    "avg_download_latency_ms": 32.0,
+    "avg_upload_latency_ms": 32.0,
+    "tests": 1,
+    "source": "nearest"
+  },
+  "connectivity_error": null,
+  "evaluation": {
+    "lane": {
+      "score": 0.5,
+      "valid_lane_lines": 1,
+      "selected_threshold": 0.25,
+      "geometry_space": "warped_px",
+      "best_threshold_detail": {
+        "threshold": 0.25,
+        "selected_curves": [
+          [
+            98.0446,
+            337.521,
+            113.863,
+            318.547,
+            127.804,
+            302.104,
+            139.543,
+            287.718,
+            148.112,
+            275.026,
+            156.327,
+            263.745,
+            166.677,
+            253.652,
+            172.058,
+            248.994
+          ],
+          [
+            603.541,
+            374.81,
+            594.354,
+            350.376,
+            586.617,
+            329.591,
+            580.098,
+            311.695,
+            574.626,
+            296.125,
+            570.072,
+            282.455,
+            566.338,
+            270.358,
+            563.344,
+            259.576,
+            561.031,
+            249.906,
+            559.351,
+            241.185,
+            558.269,
+            233.279,
+            557.757,
+            226.079,
+            557.792,
+            219.495,
+            558.353,
+            213.451,
+            559.423,
+            207.884,
+            560.989,
+            202.738,
+            563.045,
+            197.967,
+            565.601,
+            193.533,
+            568.669,
+            189.401,
+            572.26,
+            185.541,
+            576.382,
+            181.926,
+            581.043,
+            178.535,
+            586.251,
+            175.347,
+            591.999,
+            172.344,
+            598.185,
+            169.511,
+            604.661,
+            166.834,
+            611.298,
+            164.3,
+            617.977,
+            161.898,
+            624.593,
+            159.618,
+            631.051,
+            157.45,
+            635.431,
+            155.996
+          ]
+        ],
+        "curves_with_geometry": 2,
+        "valid_curves_before_separation": 1,
+        "strict_valid_curves_before_separation": 1,
+        "pairs_evaluated": 0,
+        "pairs_meeting_separation": 0,
+        "strict_pairs_evaluated": 0,
+        "strict_pairs_meeting_separation": 0,
+        "strict_valid_lane_lines": 1,
+        "length_check": {
+          "min_length_m": 180.0,
+          "pass_count": 1,
+          "total_count": 2,
+          "pass_rate": 0.5,
+          "stats_m": {
+            "count": 2,
+            "min": 65.07266982505512,
+            "median": 207.87409249753196,
+            "max": 350.6755151700088
+          }
+        },
+        "curvature_check": {
+          "max_curvature_1pm": 0.1,
+          "soft_max_curvature_1pm": 0.18000000000000002,
+          "pass_count": 2,
+          "soft_pass_count": 2,
+          "total_count": 2,
+          "pass_rate": 1.0,
+          "soft_pass_rate": 1.0,
+          "stats_1pm": {
+            "count": 2,
+            "min": 0.0015305363504212375,
+            "median": 0.0026146017074648946,
+            "max": 0.003698667064508552
+          }
+        },
+        "separation_check": {
+          "min_separation_m": 2.5,
+          "pairs_meeting_separation": 0,
+          "pairs_evaluated": 0,
+          "pass_rate": 0.0,
+          "stats_m": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "max": null
+          }
+        },
+        "strict_separation_check": {
+          "min_separation_m": 2.5,
+          "pairs_meeting_separation": 0,
+          "pairs_evaluated": 0,
+          "pass_rate": 0.0,
+          "stats_m": {
+            "count": 0,
+            "min": null,
+            "median": null,
+            "max": null
+          }
+        },
+        "curves_total": 2
+      }
+    },
+    "gps": {
+      "score": 1.0,
+      "er": 1.7669054629630676,
+      "lat_stdev": 1.3434888124465942,
+      "lon_stdev": 1.1476030349731445
+    },
+    "connectivity": {
+      "score": 0.75,
+      "subscores": {
+        "avg_d_mbps": 1.0,
+        "avg_u_mbps": 0.25,
+        "avg_download_latency_ms": 0.75,
+        "avg_upload_latency_ms": 1.0
+      },
+      "metrics": {
+        "avg_d_mbps": 619.882,
+        "avg_u_mbps": 11.953,
+        "avg_download_latency_ms": 32.0,
+        "avg_upload_latency_ms": 32.0
+      }
+    },
+    "weights": {
+      "w1": 0.6,
+      "w2": 0.4,
+      "k1": 1.0,
+      "k2": 0.0,
+      "k3": 0.0,
+      "m1": 0.5,
+      "m2": 0.4,
+      "m3": 0.1
+    },
+    "overall_score": 0.6100000000000001,
+    "overall_score_details": {
+      "formula": "overall_score = w1*physical_score + w2*digital_score",
+      "physical_contribution": {
+        "weight": 0.6,
+        "score": 0.5,
+        "weighted_score": 0.3
+      },
+      "digital_contribution": {
+        "weight": 0.4,
+        "score": 0.775,
+        "weighted_score": 0.31000000000000005
+      },
+      "components": {
+        "physical_infra_score": 0.3,
+        "digital_infra_score": 0.31000000000000005,
+        "physical_score": 0.5,
+        "digital_score": 0.775,
+        "lane_score": 0.5,
+        "pavement_score": 0.0,
+        "traffic_sign_score": 0.0,
+        "hd_maps_score": 0.0,
+        "connectivity_score": 0.75,
+        "gps_score": 1.0
+      }
+    }
+  }
+}

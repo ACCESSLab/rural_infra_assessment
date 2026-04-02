@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Road Readiness Dashboard</title>
+  <style>
+    html, body { margin: 0; height: 100%; font-family: Arial, sans-serif; }
+    .wrap { display: flex; height: 100vh; width: 100vw; }
+    .left { width: 38%; min-width: 360px; max-width: 620px; overflow: auto; padding: 14px; box-sizing: border-box; background: #f5f6f8; border-right: 1px solid #d9d9d9; }
+    .right { flex: 1; min-width: 0; }
+    .mapframe { width: 100%; height: 100%; border: none; }
+    h1 { font-size: 20px; margin: 0 0 10px 0; }
+    h2 { font-size: 15px; margin: 16px 0 8px 0; }
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    .kv { font-size: 13px; line-height: 1.5; }
+    .hero-card { padding: 14px; border-radius: 14px; background: linear-gradient(135deg, #16344f 0%, #245f83 100%); color: #fff; margin-bottom: 12px; }
+    .hero-eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }
+    .hero-score { display:flex; align-items:flex-end; gap:10px; margin-top:8px; }
+    .hero-value { font-size: 36px; line-height: 1; font-weight: 800; }
+    .hero-meta { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+    .hero-meta-card { background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.16); border-radius:10px; padding:8px 10px; }
+    .score-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+    .score-card { background:#fff; border:1px solid #d7dee5; border-radius:12px; padding:12px; }
+    .score-card-title { font-size:12px; color:#52606d; text-transform:uppercase; letter-spacing:0.06em; }
+    .score-card-value { font-size:24px; font-weight:800; color:#162535; margin-top:4px; }
+    .score-pill { display:inline-block; margin-top:8px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+    .score-card-note { margin-top:8px; font-size:12px; color:#60707c; }
+    .mile-strip { margin-top:10px; }
+    .mile-strip-scroll { overflow-x:auto; overflow-y:hidden; padding-bottom:6px; }
+    .mile-strip-track { display:grid; grid-template-columns: repeat(41, minmax(12px, 1fr)); gap:3px; min-width:max-content; }
+    .mile-strip-cell { height:18px; border-radius:4px; min-width:12px; }
+    .mile-strip-scale { display:flex; justify-content:space-between; gap:8px; margin-top:8px; font-size:11px; color:#60707c; }
+    .low-mile-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .low-mile-pill { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid; font-size:11px; font-weight:700; }
+    table { border-collapse: collapse; width: 100%; background: #fff; font-size: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+    th { background: #fafafa; position: sticky; top: 0; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; color: #fff; background: #2e7d32; }
+    .small { font-size: 12px; color: #666; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    details.card > summary { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="left">
+      <h1>Road Readiness Dashboard</h1>
+      <details class="card" open>
+        <summary><b>1) Summary (Overall + Per-Mile Readiness)</b></summary>
+        <div class="hero-card" style="margin-top:8px;">
+          <div class="hero-eyebrow">Road Readiness Overview</div>
+          <div class="hero-score">
+            <div class="hero-value">0.8625</div>
+            <span class="tag" style="background:#e4f5e9;color:#17693a;">High Readiness</span>
+          </div>
+          <div class="hero-meta">
+            <div class="hero-meta-card"><b>Total Distance</b><br>40.295 miles</div>
+            <div class="hero-meta-card"><b>Mile Bins</b><br>41</div>
+            <div class="hero-meta-card"><b>Readiness JSON</b><br><span class="mono">readiness_per_mile.json</span></div>
+            <div class="hero-meta-card"><b>PDF Report</b><br><a href="../research_report.pdf" target="_blank" rel="noopener noreferrer" style="color:#fff;">report.pdf</a> <span class="report-action"><button type="button" onclick='startReportRegen(this, "/home/tma/proj2-5/results", "current report")' style="margin-left:6px;padding:4px 8px;border:1px solid rgba(255,255,255,0.35);border-radius:8px;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;">Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;opacity:0.9;"></span></span></div>
+          </div>
+        </div>
+        <div class="score-grid">
+          <div class='score-card'><div class='score-card-title'>Lane</div><div class='score-card-value'>0.9741</div><div class='score-pill' style='background:#e4f5e9;color:#17693a;'>High Readiness</div><div class='score-card-note'>Visible lane structure quality</div></div><div class='score-card'><div class='score-card-title'>Connectivity</div><div class='score-card-value'>0.6182</div><div class='score-pill' style='background:#fff3d6;color:#8a5a00;'>Medium Readiness</div><div class='score-card-note'>Digital network readiness</div></div><div class='score-card'><div class='score-card-title'>GPS</div><div class='score-card-value'>0.9857</div><div class='score-pill' style='background:#e4f5e9;color:#17693a;'>High Readiness</div><div class='score-card-note'>Localization confidence</div></div><div class='score-card'><div class='score-card-title'>HD-Map</div><div class='score-card-value'>0.0000</div><div class='score-pill' style='background:#fde8e7;color:#b3261e;'>Low Readiness</div><div class='score-card-note'>Mapped-digital support</div></div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;">Per-Mile Readiness Strip</div>
+          <div class="small" style="margin-top:4px;">Compact scan of route readiness from start to end. Hover any block for the mile and score.</div>
+          <div class="mile-strip">
+            <div class="mile-strip-scroll">
+              <div class="mile-strip-track">
+                <div class='mile-strip-cell' title='Mile 0: 0.891 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 1: 0.901 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 2: 0.870 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 3: 0.869 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 4: 0.894 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 5: 0.890 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 6: 0.880 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 7: 0.842 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 8: 0.850 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 9: 0.910 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 10: 0.782 (Medium Readiness)' style='background:#8a5a00;'></div><div class='mile-strip-cell' title='Mile 11: 0.924 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 12: 0.947 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 13: 0.918 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 14: 0.872 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 15: 0.866 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 16: 0.871 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 17: 0.861 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 18: 0.847 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 19: 0.847 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 20: 0.792 (Medium Readiness)' style='background:#8a5a00;'></div><div class='mile-strip-cell' title='Mile 21: 0.816 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 22: 0.820 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 23: 0.838 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 24: 0.804 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 25: 0.832 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 26: 0.818 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 27: 0.876 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 28: 0.929 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 29: 0.891 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 30: 0.928 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 31: 0.880 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 32: 0.863 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 33: 0.845 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 34: 0.847 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 35: 0.777 (Medium Readiness)' style='background:#8a5a00;'></div><div class='mile-strip-cell' title='Mile 36: 0.906 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 37: 0.902 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 38: 0.894 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 39: 0.861 (High Readiness)' style='background:#17693a;'></div><div class='mile-strip-cell' title='Mile 40: 0.846 (High Readiness)' style='background:#17693a;'></div>
+              </div>
+            </div>
+            <div class="mile-strip-scale">
+              <span>Start</span>
+              <span>41 mile bins</span>
+              <span>End</span>
+            </div>
+          </div>
+        </div>
+        <div style="max-height: 260px; overflow:auto; margin-top:8px;">
+          <table>
+            <thead><tr><th>Mile</th><th>Readiness</th><th>Level</th></tr></thead>
+            <tbody><tr><td>0</td><td>0.891</td><td>High Readiness</td></tr><tr><td>1</td><td>0.901</td><td>High Readiness</td></tr><tr><td>2</td><td>0.870</td><td>High Readiness</td></tr><tr><td>3</td><td>0.869</td><td>High Readiness</td></tr><tr><td>4</td><td>0.894</td><td>High Readiness</td></tr><tr><td>5</td><td>0.890</td><td>High Readiness</td></tr><tr><td>6</td><td>0.880</td><td>High Readiness</td></tr><tr><td>7</td><td>0.842</td><td>High Readiness</td></tr><tr><td>8</td><td>0.850</td><td>High Readiness</td></tr><tr><td>9</td><td>0.910</td><td>High Readiness</td></tr><tr><td>10</td><td>0.782</td><td>Medium Readiness</td></tr><tr><td>11</td><td>0.924</td><td>High Readiness</td></tr><tr><td>12</td><td>0.947</td><td>High Readiness</td></tr><tr><td>13</td><td>0.918</td><td>High Readiness</td></tr><tr><td>14</td><td>0.872</td><td>High Readiness</td></tr><tr><td>15</td><td>0.866</td><td>High Readiness</td></tr><tr><td>16</td><td>0.871</td><td>High Readiness</td></tr><tr><td>17</td><td>0.861</td><td>High Readiness</td></tr><tr><td>18</td><td>0.847</td><td>High Readiness</td></tr><tr><td>19</td><td>0.847</td><td>High Readiness</td></tr><tr><td>20</td><td>0.792</td><td>Medium Readiness</td></tr><tr><td>21</td><td>0.816</td><td>High Readiness</td></tr><tr><td>22</td><td>0.820</td><td>High Readiness</td></tr><tr><td>23</td><td>0.838</td><td>High Readiness</td></tr><tr><td>24</td><td>0.804</td><td>High Readiness</td></tr><tr><td>25</td><td>0.832</td><td>High Readiness</td></tr><tr><td>26</td><td>0.818</td><td>High Readiness</td></tr><tr><td>27</td><td>0.876</td><td>High Readiness</td></tr><tr><td>28</td><td>0.929</td><td>High Readiness</td></tr><tr><td>29</td><td>0.891</td><td>High Readiness</td></tr><tr><td>30</td><td>0.928</td><td>High Readiness</td></tr><tr><td>31</td><td>0.880</td><td>High Readiness</td></tr><tr><td>32</td><td>0.863</td><td>High Readiness</td></tr><tr><td>33</td><td>0.845</td><td>High Readiness</td></tr><tr><td>34</td><td>0.847</td><td>High Readiness</td></tr><tr><td>35</td><td>0.777</td><td>Medium Readiness</td></tr><tr><td>36</td><td>0.906</td><td>High Readiness</td></tr><tr><td>37</td><td>0.902</td><td>High Readiness</td></tr><tr><td>38</td><td>0.894</td><td>High Readiness</td></tr><tr><td>39</td><td>0.861</td><td>High Readiness</td></tr><tr><td>40</td><td>0.846</td><td>High Readiness</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary><b>2) Detailed Evaluation Per Mile</b></summary>
+        <div style="max-height: 340px; overflow:auto; margin-top:8px;">
+          <table>
+            <thead>
+              <tr><th>Mile</th><th>Overall</th><th>Status</th><th>Lane</th><th>Conn</th><th>GPS</th><th>HD</th><th>N</th></tr>
+            </thead>
+            <tbody><tr style="background:#e4f5e9;"><td>0</td><td>0.891</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.998</td><td>0.659</td><td>1.000</td><td>0.000</td><td>258</td></tr><tr style="background:#e4f5e9;"><td>1</td><td>0.901</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.995</td><td>0.721</td><td>1.000</td><td>0.000</td><td>263</td></tr><tr style="background:#e4f5e9;"><td>2</td><td>0.870</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.549</td><td>1.000</td><td>0.000</td><td>238</td></tr><tr style="background:#e4f5e9;"><td>3</td><td>0.869</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.973</td><td>0.625</td><td>1.000</td><td>0.000</td><td>319</td></tr><tr style="background:#e4f5e9;"><td>4</td><td>0.894</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.670</td><td>1.000</td><td>0.000</td><td>222</td></tr><tr style="background:#e4f5e9;"><td>5</td><td>0.890</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.996</td><td>0.688</td><td>0.970</td><td>0.000</td><td>274</td></tr><tr style="background:#e4f5e9;"><td>6</td><td>0.880</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.615</td><td>0.983</td><td>0.000</td><td>219</td></tr><tr style="background:#e4f5e9;"><td>7</td><td>0.842</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.503</td><td>0.886</td><td>0.000</td><td>225</td></tr><tr style="background:#e4f5e9;"><td>8</td><td>0.850</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.900</td><td>0.750</td><td>1.000</td><td>0.000</td><td>319</td></tr><tr style="background:#e4f5e9;"><td>9</td><td>0.910</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.750</td><td>1.000</td><td>0.000</td><td>240</td></tr><tr style="background:#fff3d6;"><td>10</td><td>0.782</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#fff3d6;color:#8a5a00;font-weight:700;">Medium Readiness</span></td><td>0.786</td><td>0.750</td><td>1.000</td><td>0.000</td><td>376</td></tr><tr style="background:#e4f5e9;"><td>11</td><td>0.924</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.818</td><td>1.000</td><td>0.000</td><td>238</td></tr><tr style="background:#e4f5e9;"><td>12</td><td>0.947</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.938</td><td>1.000</td><td>0.000</td><td>219</td></tr><tr style="background:#e4f5e9;"><td>13</td><td>0.918</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.789</td><td>1.000</td><td>0.000</td><td>225</td></tr><tr style="background:#e4f5e9;"><td>14</td><td>0.872</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.562</td><td>1.000</td><td>0.000</td><td>234</td></tr><tr style="background:#e4f5e9;"><td>15</td><td>0.866</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.989</td><td>0.562</td><td>1.000</td><td>0.000</td><td>281</td></tr><tr style="background:#e4f5e9;"><td>16</td><td>0.871</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.998</td><td>0.562</td><td>1.000</td><td>0.000</td><td>230</td></tr><tr style="background:#e4f5e9;"><td>17</td><td>0.861</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.506</td><td>1.000</td><td>0.000</td><td>230</td></tr><tr style="background:#e4f5e9;"><td>18</td><td>0.847</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.994</td><td>0.452</td><td>1.000</td><td>0.000</td><td>352</td></tr><tr style="background:#e4f5e9;"><td>19</td><td>0.847</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.438</td><td>1.000</td><td>0.000</td><td>236</td></tr><tr style="background:#fff3d6;"><td>20</td><td>0.792</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#fff3d6;color:#8a5a00;font-weight:700;">Medium Readiness</span></td><td>0.978</td><td>0.321</td><td>0.882</td><td>0.000</td><td>245</td></tr><tr style="background:#e4f5e9;"><td>21</td><td>0.816</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.312</td><td>0.962</td><td>0.000</td><td>280</td></tr><tr style="background:#e4f5e9;"><td>22</td><td>0.820</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.318</td><td>0.974</td><td>0.000</td><td>231</td></tr><tr style="background:#e4f5e9;"><td>23</td><td>0.838</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.999</td><td>0.438</td><td>0.946</td><td>0.000</td><td>278</td></tr><tr style="background:#e4f5e9;"><td>24</td><td>0.804</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.944</td><td>0.438</td><td>0.938</td><td>0.000</td><td>268</td></tr><tr style="background:#e4f5e9;"><td>25</td><td>0.832</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.438</td><td>0.901</td><td>0.000</td><td>243</td></tr><tr style="background:#e4f5e9;"><td>26</td><td>0.818</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.950</td><td>0.438</td><td>1.000</td><td>0.000</td><td>336</td></tr><tr style="background:#e4f5e9;"><td>27</td><td>0.876</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.582</td><td>1.000</td><td>0.000</td><td>227</td></tr><tr style="background:#e4f5e9;"><td>28</td><td>0.929</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.993</td><td>0.865</td><td>1.000</td><td>0.000</td><td>216</td></tr><tr style="background:#e4f5e9;"><td>29</td><td>0.891</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.907</td><td>0.938</td><td>1.000</td><td>0.000</td><td>275</td></tr><tr style="background:#e4f5e9;"><td>30</td><td>0.928</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.840</td><td>1.000</td><td>0.000</td><td>217</td></tr><tr style="background:#e4f5e9;"><td>31</td><td>0.880</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.998</td><td>0.607</td><td>1.000</td><td>0.000</td><td>218</td></tr><tr style="background:#e4f5e9;"><td>32</td><td>0.863</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.526</td><td>0.988</td><td>0.000</td><td>243</td></tr><tr style="background:#e4f5e9;"><td>33</td><td>0.845</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.999</td><td>0.438</td><td>0.987</td><td>0.000</td><td>340</td></tr><tr style="background:#e4f5e9;"><td>34</td><td>0.847</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.999</td><td>0.438</td><td>1.000</td><td>0.000</td><td>246</td></tr><tr style="background:#fff3d6;"><td>35</td><td>0.777</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#fff3d6;color:#8a5a00;font-weight:700;">Medium Readiness</span></td><td>0.782</td><td>0.739</td><td>1.000</td><td>0.000</td><td>392</td></tr><tr style="background:#e4f5e9;"><td>36</td><td>0.906</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.974</td><td>0.809</td><td>1.000</td><td>0.000</td><td>264</td></tr><tr style="background:#e4f5e9;"><td>37</td><td>0.902</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>1.000</td><td>0.710</td><td>1.000</td><td>0.000</td><td>262</td></tr><tr style="background:#e4f5e9;"><td>38</td><td>0.894</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.974</td><td>0.750</td><td>1.000</td><td>0.000</td><td>352</td></tr><tr style="background:#e4f5e9;"><td>39</td><td>0.861</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.919</td><td>0.750</td><td>1.000</td><td>0.000</td><td>303</td></tr><tr style="background:#e4f5e9;"><td>40</td><td>0.846</td><td><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e4f5e9;color:#17693a;font-weight:700;">High Readiness</span></td><td>0.893</td><td>0.750</td><td>1.000</td><td>0.000</td><td>103</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary><b>3) Evidence For Low Scores</b></summary>
+        <div class="card kv" style="margin-top:8px;">
+          No dominant low-score driver detected.
+        </div>
+        <div class="low-mile-pills">
+          <span class='low-mile-pill' style='background:#fff3d6;color:#8a5a00;border-color:#8a5a00;'>Mile 35 · 0.777</span><span class='low-mile-pill' style='background:#fff3d6;color:#8a5a00;border-color:#8a5a00;'>Mile 10 · 0.782</span><span class='low-mile-pill' style='background:#fff3d6;color:#8a5a00;border-color:#8a5a00;'>Mile 20 · 0.792</span>
+        </div>
+        <details class='card' open><summary><b>Mile 35</b> readiness=0.777 (Medium Readiness)</summary><div style='margin-top:8px'><div class='card' style='margin:8px 0;'><div><b>image_90620.jpg</b> (frame 90620, mile 35.002)</div><div class='kv'>Overall score: 0.8475<br>Lane score: 1.0000<br>GPS score: 1.0000<br>Connectivity score: 0.4375</div><a href="readiness_heatmap.html#focus=36.146775413851195,-79.79133540012656,%3Cb%3Eimage_90620.jpg%3C%2Fb%3E%3Cbr%3Eframe%2090620%2C%20mile%2035.002%3Cbr%3E%3Cimg%20src%3D%22keypoint_overlays%2Fimage_90620.jpg%22%20loading%3D%22lazy%22%20decoding%3D%22async%22%20style%3D%22width%3A100%25%3Bmax-width%3A340px%3Bborder%3A1px%20solid%20%23bbb%3Bborder-radius%3A4px%3Bmargin%3A6px%200%3B%22%20%2F%3EOverall%20score%3A%200.8475%3Cbr%3ELane%20score%3A%201.0000%3Cbr%3EGPS%20score%3A%201.0000%3Cbr%3EConnectivity%20score%3A%200.4375" target="mapframe" class="evidence-link" data-lat="36.146775413851195" data-lon="-79.79133540012656" data-popup="&lt;b&gt;image_90620.jpg&lt;/b&gt;&lt;br&gt;frame 90620, mile 35.002&lt;br&gt;&lt;img src=&quot;keypoint_overlays/image_90620.jpg&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; style=&quot;width:100%;max-width:340px;border:1px solid #bbb;border-radius:4px;margin:6px 0;&quot; /&gt;Overall score: 0.8475&lt;br&gt;Lane score: 1.0000&lt;br&gt;GPS score: 1.0000&lt;br&gt;Connectivity score: 0.4375" title="Click to zoom map and show evidence details"><img src="keypoint_overlays/image_90620.jpg" loading="lazy" decoding="async" style="width:100%;max-width:260px;border:1px solid #1e88e5;border-radius:6px;margin-top:6px;cursor:pointer;" /></a></div><div class='card' style='margin:8px 0;'><div><b>image_90710.jpg</b> (frame 90710, mile 35.041)</div><div class='kv'>Overall score: 0.8475<br>Lane score: 1.0000<br>GPS score: 1.0000<br>Connectivity score: 0.4375</div><a href="readiness_heatmap.html#focus=36.14620461412691,-79.79135715541956,%3Cb%3Eimage_90710.jpg%3C%2Fb%3E%3Cbr%3Eframe%2090710%2C%20mile%2035.041%3Cbr%3E%3Cimg%20src%3D%22keypoint_overlays%2Fimage_90710.jpg%22%20loading%3D%22lazy%22%20decoding%3D%22async%22%20style%3D%22width%3A100%25%3Bmax-width%3A340px%3Bborder%3A1px%20solid%20%23bbb%3Bborder-radius%3A4px%3Bmargin%3A6px%200%3B%22%20%2F%3EOverall%20score%3A%200.8475%3Cbr%3ELane%20score%3A%201.0000%3Cbr%3EGPS%20score%3A%201.0000%3Cbr%3EConnectivity%20score%3A%200.4375" target="mapframe" class="evidence-link" data-lat="36.14620461412691" data-lon="-79.79135715541956" data-popup="&lt;b&gt;image_90710.jpg&lt;/b&gt;&lt;br&gt;frame 90710, mile 35.041&lt;br&gt;&lt;img src=&quot;keypoint_overlays/image_90710.jpg&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; style=&quot;width:100%;max-width:340px;border:1px solid #bbb;border-radius:4px;margin:6px 0;&quot; /&gt;Overall score: 0.8475&lt;br&gt;Lane score: 1.0000&lt;br&gt;GPS score: 1.0000&lt;br&gt;Connectivity score: 0.4375" title="Click to zoom map and show evidence details"><img src="keypoint_overlays/image_90710.jpg" loading="lazy" decoding="async" style="width:100%;max-width:260px;border:1px solid #1e88e5;border-radius:6px;margin-top:6px;cursor:pointer;" /></a></div></div></details><details class='card' open><summary><b>Mile 10</b> readiness=0.782 (Medium Readiness)</summary><div style='margin-top:8px'><div class='card' style='margin:8px 0;'><div><b>image_25780.jpg</b> (frame 25780, mile 10.001)</div><div class='kv'>Overall score: 0.9100<br>Lane score: 1.0000<br>GPS score: 1.0000<br>Connectivity score: 0.7500</div><a href="readiness_heatmap.html#focus=36.30331398794925,-79.73868678223384,%3Cb%3Eimage_25780.jpg%3C%2Fb%3E%3Cbr%3Eframe%2025780%2C%20mile%2010.001%3Cbr%3E%3Cimg%20src%3D%22keypoint_overlays%2Fimage_25780.jpg%22%20loading%3D%22lazy%22%20decoding%3D%22async%22%20style%3D%22width%3A100%25%3Bmax-width%3A340px%3Bborder%3A1px%20solid%20%23bbb%3Bborder-radius%3A4px%3Bmargin%3A6px%200%3B%22%20%2F%3EOverall%20score%3A%200.9100%3Cbr%3ELane%20score%3A%201.0000%3Cbr%3EGPS%20score%3A%201.0000%3Cbr%3EConnectivity%20score%3A%200.7500" target="mapframe" class="evidence-link" data-lat="36.30331398794925" data-lon="-79.73868678223384" data-popup="&lt;b&gt;image_25780.jpg&lt;/b&gt;&lt;br&gt;frame 25780, mile 10.001&lt;br&gt;&lt;img src=&quot;keypoint_overlays/image_25780.jpg&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; style=&quot;width:100%;max-width:340px;border:1px solid #bbb;border-radius:4px;margin:6px 0;&quot; /&gt;Overall score: 0.9100&lt;br&gt;Lane score: 1.0000&lt;br&gt;GPS score: 1.0000&lt;br&gt;Connectivity score: 0.7500" title="Click to zoom map and show evidence details"><img src="keypoint_overlays/image_25780.jpg" loading="lazy" decoding="async" style="width:100%;max-width:260px;border:1px solid #1e88e5;border-radius:6px;margin-top:6px;cursor:pointer;" /></a></div><div class='card' style='margin:8px 0;'><div><b>image_25810.jpg</b> (frame 25810, mile 10.012)</div><div class='kv'>Overall score: 0.9100<br>Lane score: 1.0000<br>GPS score: 1.0000<br>Connectivity score: 0.7500</div><a href="readiness_heatmap.html#focus=36.30340632757903,-79.73884745289021,%3Cb%3Eimage_25810.jpg%3C%2Fb%3E%3Cbr%3Eframe%2025810%2C%20mile%2010.012%3Cbr%3E%3Cimg%20src%3D%22keypoint_overlays%2Fimage_25810.jpg%22%20loading%3D%22lazy%22%20decoding%3D%22async%22%20style%3D%22width%3A100%25%3Bmax-width%3A340px%3Bborder%3A1px%20solid%20%23bbb%3Bborder-radius%3A4px%3Bmargin%3A6px%200%3B%22%20%2F%3EOverall%20score%3A%200.9100%3Cbr%3ELane%20score%3A%201.0000%3Cbr%3EGPS%20score%3A%201.0000%3Cbr%3EConnectivity%20score%3A%200.7500" target="mapframe" class="evidence-link" data-lat="36.30340632757903" data-lon="-79.73884745289021" data-popup="&lt;b&gt;image_25810.jpg&lt;/b&gt;&lt;br&gt;frame 25810, mile 10.012&lt;br&gt;&lt;img src=&quot;keypoint_overlays/image_25810.jpg&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; style=&quot;width:100%;max-width:340px;border:1px solid #bbb;border-radius:4px;margin:6px 0;&quot; /&gt;Overall score: 0.9100&lt;br&gt;Lane score: 1.0000&lt;br&gt;GPS score: 1.0000&lt;br&gt;Connectivity score: 0.7500" title="Click to zoom map and show evidence details"><img src="keypoint_overlays/image_25810.jpg" loading="lazy" decoding="async" style="width:100%;max-width:260px;border:1px solid #1e88e5;border-radius:6px;margin-top:6px;cursor:pointer;" /></a></div></div></details><details class='card' open><summary><b>Mile 20</b> readiness=0.792 (Medium Readiness)</summary><div style='margin-top:8px'><div class='card' style='margin:8px 0;'><div><b>image_51990.jpg</b> (frame 51990, mile 20.005)</div><div class='kv'>Overall score: 0.8475<br>Lane score: 1.0000<br>GPS score: 1.0000<br>Connectivity score: 0.4375</div><a href="readiness_heatmap.html#focus=36.2814532784238,-79.8514300965782,%3Cb%3Eimage_51990.jpg%3C%2Fb%3E%3Cbr%3Eframe%2051990%2C%20mile%2020.005%3Cbr%3E%3Cimg%20src%3D%22keypoint_overlays%2Fimage_51990.jpg%22%20loading%3D%22lazy%22%20decoding%3D%22async%22%20style%3D%22width%3A100%25%3Bmax-width%3A340px%3Bborder%3A1px%20solid%20%23bbb%3Bborder-radius%3A4px%3Bmargin%3A6px%200%3B%22%20%2F%3EOverall%20score%3A%200.8475%3Cbr%3ELane%20score%3A%201.0000%3Cbr%3EGPS%20score%3A%201.0000%3Cbr%3EConnectivity%20score%3A%200.4375" target="mapframe" class="evidence-link" data-lat="36.2814532784238" data-lon="-79.8514300965782" data-popup="&lt;b&gt;image_51990.jpg&lt;/b&gt;&lt;br&gt;frame 51990, mile 20.005&lt;br&gt;&lt;img src=&quot;keypoint_overlays/image_51990.jpg&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; style=&quot;width:100%;max-width:340px;border:1px solid #bbb;border-radius:4px;margin:6px 0;&quot; /&gt;Overall score: 0.8475&lt;br&gt;Lane score: 1.0000&lt;br&gt;GPS score: 1.0000&lt;br&gt;Connectivity score: 0.4375" title="Click to zoom map and show evidence details"><img src="keypoint_overlays/image_51990.jpg" loading="lazy" decoding="async" style="width:100%;max-width:260px;border:1px solid #1e88e5;border-radius:6px;margin-top:6px;cursor:pointer;" /></a></div><div class='card' style='margin:8px 0;'><div><b>image_52010.jpg</b> (frame 52010, mile 20.013)</div><div class='kv'>Overall score: 0.8475<br>Lane score: 1.0000<br>GPS score: 1.0000<br>Connectivity score: 0.4375</div><a href="readiness_heatmap.html#focus=36.28134648084953,-79.8513651371759,%3Cb%3Eimage_52010.jpg%3C%2Fb%3E%3Cbr%3Eframe%2052010%2C%20mile%2020.013%3Cbr%3E%3Cimg%20src%3D%22keypoint_overlays%2Fimage_52010.jpg%22%20loading%3D%22lazy%22%20decoding%3D%22async%22%20style%3D%22width%3A100%25%3Bmax-width%3A340px%3Bborder%3A1px%20solid%20%23bbb%3Bborder-radius%3A4px%3Bmargin%3A6px%200%3B%22%20%2F%3EOverall%20score%3A%200.8475%3Cbr%3ELane%20score%3A%201.0000%3Cbr%3EGPS%20score%3A%201.0000%3Cbr%3EConnectivity%20score%3A%200.4375" target="mapframe" class="evidence-link" data-lat="36.28134648084953" data-lon="-79.8513651371759" data-popup="&lt;b&gt;image_52010.jpg&lt;/b&gt;&lt;br&gt;frame 52010, mile 20.013&lt;br&gt;&lt;img src=&quot;keypoint_overlays/image_52010.jpg&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; style=&quot;width:100%;max-width:340px;border:1px solid #bbb;border-radius:4px;margin:6px 0;&quot; /&gt;Overall score: 0.8475&lt;br&gt;Lane score: 1.0000&lt;br&gt;GPS score: 1.0000&lt;br&gt;Connectivity score: 0.4375" title="Click to zoom map and show evidence details"><img src="keypoint_overlays/image_52010.jpg" loading="lazy" decoding="async" style="width:100%;max-width:260px;border:1px solid #1e88e5;border-radius:6px;margin-top:6px;cursor:pointer;" /></a></div></div></details>
+      </details>
+
+      <details class="card">
+        <summary><b>4) Reweight Evaluation</b></summary>
+        <div class="small" style="margin-top:8px;">
+          Re-run only evaluation + readiness rendering with new weights (no rosbag pipeline stage).
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+          <label class="small">w1 (phys. infra)<input id="rw_w1" value="0.6" title="w1 physical infra weight" /></label>
+          <label class="small">w2 (digital infra)<input id="rw_w2" value="0.4" title="w2 digital infra weight" /></label>
+          <label class="small">m1 (5G conn)<input id="rw_m1" value="0.5" title="m1 connectivity weight" /></label>
+          <label class="small">m2 (gps)<input id="rw_m2" value="0.4" title="m2 gps weight" /></label>
+          <label class="small">m3 (HD map)<input id="rw_m3" value="0.1" title="m3 hd maps weight" /></label>
+          <button style="align-self:end;" onclick="startReweightFromPanel()">Reweight Eval</button>
+        </div>
+        <div class="small" style="margin-top:6px;">
+          Source fused dir: <span class="mono">/home/tma/proj2-5/results/evaluated</span>
+        </div>
+      </details>
+
+    </div>
+    <div class="right">
+      <iframe class="mapframe" name="mapframe" src="readiness_heatmap.html"></iframe>
+    </div>
+  </div>
+<script>
+function focusMapPoint(lat, lon, label) {
+  var frame = document.querySelector('.mapframe');
+  if (!frame) return;
+  var payload = {
+    type: 'focus_point',
+    lat: Number(lat),
+    lon: Number(lon),
+    zoom: 18,
+    label: label || ''
+  };
+  var post = function() {
+    if (!frame.contentWindow) return false;
+    frame.contentWindow.postMessage(payload, '*');
+    return true;
+  };
+  if (!post()) {
+    frame.addEventListener('load', function() { post(); }, { once: true });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var links = document.querySelectorAll('.evidence-link');
+  links.forEach(function(link) {
+    link.addEventListener('click', function(evt) {
+      evt.preventDefault();
+      var lat = Number(link.getAttribute('data-lat'));
+      var lon = Number(link.getAttribute('data-lon'));
+      var popup = link.getAttribute('data-popup') || '';
+      focusMapPoint(lat, lon, popup);
+    });
+  });
+});
+
+async function startReweightFromPanel() {
+  const payload = {
+    w1: document.getElementById('rw_w1').value,
+    w2: document.getElementById('rw_w2').value,
+    m1: document.getElementById('rw_m1').value,
+    m2: document.getElementById('rw_m2').value,
+    m3: document.getElementById('rw_m3').value,
+    keypoint_stride: 10,
+    source_fused_dir: "/home/tma/proj2-5/results/evaluated",
+    source_lane_images_dir: "/home/tma/proj2-5/results/lane/images"
+  };
+  const res = await fetch('/api/reweight', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const j = await res.json();
+  if (!j.ok) {
+    alert(j.error || 'Failed to start reweight evaluation');
+    return;
+  }
+  alert('Reweight evaluation started. Check progress in Run Pipeline tab.');
+  if (window.parent && typeof window.parent.switchTab === 'function') {
+    window.parent.switchTab('runTab', window.parent.document.querySelector('.tab-btn[data-tab="runTab"]'));
+  }
+}
+
+let reportStatusTimer = null;
+
+function normalizeReportPath(path) {
+  return String(path || '').replace(/\\/g, '/').replace(/\/+$/, '');
+}
+
+function updateReportStatus(button, text, color) {
+  if (!button) return;
+  const status = button.parentElement ? button.parentElement.querySelector('.report-status') : null;
+  if (status) {
+    status.textContent = text || '';
+    status.style.color = color || '';
+    status.style.fontWeight = '700';
+  }
+}
+
+async function watchReportRegen(button, resultsDir) {
+  if (reportStatusTimer) {
+    clearTimeout(reportStatusTimer);
+    reportStatusTimer = null;
+  }
+  const wanted = normalizeReportPath(resultsDir);
+  try {
+    const res = await fetch('/api/status');
+    const j = await res.json();
+    const active = normalizeReportPath((j.params || {}).results_dir || '');
+    const sameReport = wanted && active && wanted === active;
+    if (j.running && j.run_kind === 'report' && sameReport) {
+      button.disabled = true;
+      updateReportStatus(button, j.progress_text || 'Running...', '#ffd54f');
+      reportStatusTimer = setTimeout(() => watchReportRegen(button, resultsDir), 1500);
+      return;
+    }
+    if (sameReport && j.stage === 'completed') {
+      button.disabled = false;
+      updateReportStatus(button, 'Completed', '#ffd54f');
+      return;
+    }
+    if (sameReport && j.stage === 'failed') {
+      button.disabled = false;
+      updateReportStatus(button, 'Failed', '#b3261e');
+      return;
+    }
+    if (sameReport && j.stage === 'stopped') {
+      button.disabled = false;
+      updateReportStatus(button, 'Stopped', '#ffd54f');
+      return;
+    }
+    button.disabled = false;
+  } catch (err) {
+    button.disabled = false;
+    updateReportStatus(button, 'Status unavailable', '#b3261e');
+  }
+}
+
+async function startReportRegen(button, resultsDir, label) {
+  if (button) {
+    button.disabled = true;
+    updateReportStatus(button, 'Starting...', '#ffd54f');
+  }
+  try {
+    const res = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ results_dir: resultsDir })
+    });
+    let j = {};
+    try {
+      j = await res.json();
+    } catch (err) {
+      j = {};
+    }
+    if (!res.ok || !j.ok) {
+      if (button) {
+        button.disabled = false;
+        updateReportStatus(
+          button,
+          res.status === 404 ? 'Restart UI server' : (j.error || 'Failed to start'),
+          '#b3261e'
+        );
+      }
+      return;
+    }
+    updateReportStatus(button, `Running ${label || 'report'}...`, '#ffd54f');
+    watchReportRegen(button, resultsDir);
+  } catch (err) {
+    if (button) {
+      button.disabled = false;
+      updateReportStatus(button, 'Request failed', '#b3261e');
+    }
+  }
+}
+</script>
+</body>
+</html>
