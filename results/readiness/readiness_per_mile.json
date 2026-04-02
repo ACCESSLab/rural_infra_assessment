@@ -1,5 +1,5 @@
 {
-  "input_dir": "/home/tma/proj2-5/results/evaluated",
+  "input_dir": "results/evaluated",
   "total_points": 10737,
   "total_distance_miles": 40.29509324398377,
   "global_readiness_index": 0.862494598118644,

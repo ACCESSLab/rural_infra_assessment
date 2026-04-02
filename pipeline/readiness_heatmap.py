@@ -21,6 +21,9 @@ from shapely.geometry import Point
 from connectivity.aggregate_by_state import OoklaSpeedLookup
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
 METRIC_LAYERS: List[Dict[str, str]] = [
     {"id": "lane", "label": "Lane Marking", "record_key": "lane_score", "mile_key": "lane_score_avg"},
     {"id": "connectivity", "label": "Connectivity", "record_key": "connectivity_score", "mile_key": "connectivity_score_avg"},
@@ -66,6 +69,24 @@ def _score_color(score: float) -> str:
     """Return the display color associated with a readiness score."""
     _, color = _readiness_label(max(0.0, min(1.0, score)))
     return color
+
+
+def _path_for_ui(path_like: Any) -> str:
+    """Return a UI-safe POSIX path, preferring repo-relative form when possible."""
+    raw = str(path_like or "").strip()
+    if not raw:
+        return ""
+    try:
+        p = Path(raw)
+        if p.is_absolute():
+            resolved = p.resolve()
+            try:
+                return resolved.relative_to(REPO_ROOT).as_posix()
+            except Exception:
+                return resolved.as_posix()
+        return p.as_posix()
+    except Exception:
+        return raw.replace("\\", "/")
 
 
 def _load_records(evaluated_dir: Path) -> List[Dict[str, Any]]:
@@ -1120,7 +1141,19 @@ def _build_dashboard_html(
     map_rel = os.path.relpath(map_html_path.as_posix(), out_dashboard.parent.as_posix())
     readiness_rel = os.path.relpath(readiness_json_path.as_posix(), out_dashboard.parent.as_posix())
     report_rel = os.path.relpath(report_pdf_path.as_posix(), out_dashboard.parent.as_posix())
-    report_results_dir = report_pdf_path.parent.resolve().as_posix()
+    report_results_dir = _path_for_ui(report_pdf_path.parent)
+    source_fused_dir = str(pipeline_config.get("source_fused_dir", "")).strip()
+    if not source_fused_dir:
+        input_dir_raw = str(pipeline_config.get("input_dir", "")).strip()
+        if input_dir_raw:
+            source_fused_dir = (Path(input_dir_raw).parent / "fused").as_posix()
+        else:
+            source_fused_dir = "results/fused"
+    source_lane_images_dir = str(pipeline_config.get("source_lane_images_dir", "")).strip() or str(
+        pipeline_config.get("lane_images_dir", "results/lane/images")
+    )
+    source_fused_dir_ui = _path_for_ui(source_fused_dir) or "results/fused"
+    source_lane_images_dir_ui = _path_for_ui(source_lane_images_dir) or "results/lane/images"
     mile_summary_rows = []
     for m in per_mile:
         mile_summary_rows.append(
@@ -1352,7 +1385,7 @@ def _build_dashboard_html(
           <button style="align-self:end;" onclick="startReweightFromPanel()">Reweight Eval</button>
         </div>
         <div class="small" style="margin-top:6px;">
-          Source fused dir: <span class="mono">{html.escape(str(pipeline_config.get("input_dir", "results/fused")))}</span>
+          Source fused dir: <span class="mono">{html.escape(source_fused_dir_ui)}</span>
         </div>
       </details>
 
@@ -1403,8 +1436,8 @@ async function startReweightFromPanel() {{
     m2: document.getElementById('rw_m2').value,
     m3: document.getElementById('rw_m3').value,
     keypoint_stride: {int(pipeline_config.get("keypoint_stride", 20))},
-    source_fused_dir: {json.dumps(str(pipeline_config.get("input_dir", "results/fused")))},
-    source_lane_images_dir: {json.dumps(str(pipeline_config.get("lane_images_dir", "results/lane/images")))}
+    source_fused_dir: {json.dumps(source_fused_dir_ui)},
+    source_lane_images_dir: {json.dumps(source_lane_images_dir_ui)}
   }};
   const res = await fetch('/api/reweight', {{
     method: 'POST',
@@ -2054,7 +2087,7 @@ def _build_multi_run_dashboard_html(
         report_rel = (
             os.path.relpath(Path(report_path).as_posix(), out_dashboard.parent.as_posix()) if report_path else None
         )
-        report_results_dir = Path(report_path).parent.resolve().as_posix() if report_path else None
+        report_results_dir = _path_for_ui(Path(report_path).parent) if report_path else None
         report_html = "Unavailable"
         if report_rel and report_results_dir:
             report_html = (
@@ -2602,6 +2635,7 @@ def run(
     global_readiness = sum(r["overall_score"] for r in records) / len(records)
     level, color = _readiness_label(global_readiness)
 
+    source_fused_dir = input_dir.parent / "fused"
     result = {
         "input_dir": input_dir.as_posix(),
         "total_points": len(records),
@@ -2658,9 +2692,11 @@ def run(
         key_points=key_points,
         eval_config=_extract_eval_config(records),
         pipeline_config={
-            "input_dir": input_dir.as_posix(),
-            "lane_images_dir": lane_images_dir.as_posix(),
-            "overlay_dir": overlay_dir.as_posix(),
+            "input_dir": _path_for_ui(input_dir),
+            "source_fused_dir": _path_for_ui(source_fused_dir),
+            "lane_images_dir": _path_for_ui(lane_images_dir),
+            "source_lane_images_dir": _path_for_ui(lane_images_dir),
+            "overlay_dir": _path_for_ui(overlay_dir),
             "keypoint_stride": keypoint_stride,
             "preview_width": preview_width,
             "mapbox_token_set": bool(mapbox_token),
