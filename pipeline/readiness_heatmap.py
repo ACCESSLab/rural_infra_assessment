@@ -1142,18 +1142,6 @@ def _build_dashboard_html(
     readiness_rel = os.path.relpath(readiness_json_path.as_posix(), out_dashboard.parent.as_posix())
     report_rel = os.path.relpath(report_pdf_path.as_posix(), out_dashboard.parent.as_posix())
     report_results_dir = _path_for_ui(report_pdf_path.parent)
-    source_fused_dir = str(pipeline_config.get("source_fused_dir", "")).strip()
-    if not source_fused_dir:
-        input_dir_raw = str(pipeline_config.get("input_dir", "")).strip()
-        if input_dir_raw:
-            source_fused_dir = (Path(input_dir_raw).parent / "fused").as_posix()
-        else:
-            source_fused_dir = "results/fused"
-    source_lane_images_dir = str(pipeline_config.get("source_lane_images_dir", "")).strip() or str(
-        pipeline_config.get("lane_images_dir", "results/lane/images")
-    )
-    source_fused_dir_ui = _path_for_ui(source_fused_dir) or "results/fused"
-    source_lane_images_dir_ui = _path_for_ui(source_lane_images_dir) or "results/lane/images"
     mile_summary_rows = []
     for m in per_mile:
         mile_summary_rows.append(
@@ -1371,24 +1359,6 @@ def _build_dashboard_html(
         {''.join(evidence_cards) if evidence_cards else '<div class="small">No low-score evidence found.</div>'}
       </details>
 
-      <details class="card">
-        <summary><b>4) Reweight Evaluation</b></summary>
-        <div class="small" style="margin-top:8px;">
-          Re-run only evaluation + readiness rendering with new weights (no rosbag pipeline stage).
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
-          <label class="small">w1 (phys. infra)<input id="rw_w1" value="0.6" title="w1 physical infra weight" /></label>
-          <label class="small">w2 (digital infra)<input id="rw_w2" value="0.4" title="w2 digital infra weight" /></label>
-          <label class="small">m1 (5G conn)<input id="rw_m1" value="0.5" title="m1 connectivity weight" /></label>
-          <label class="small">m2 (gps)<input id="rw_m2" value="0.4" title="m2 gps weight" /></label>
-          <label class="small">m3 (HD map)<input id="rw_m3" value="0.1" title="m3 hd maps weight" /></label>
-          <button style="align-self:end;" onclick="startReweightFromPanel()">Reweight Eval</button>
-        </div>
-        <div class="small" style="margin-top:6px;">
-          Source fused dir: <span class="mono">{html.escape(source_fused_dir_ui)}</span>
-        </div>
-      </details>
-
     </div>
     <div class="right">
       <iframe class="mapframe" name="mapframe" src="{html.escape(map_rel)}"></iframe>
@@ -1427,33 +1397,6 @@ document.addEventListener('DOMContentLoaded', function() {{
     }});
   }});
 }});
-
-async function startReweightFromPanel() {{
-  const payload = {{
-    w1: document.getElementById('rw_w1').value,
-    w2: document.getElementById('rw_w2').value,
-    m1: document.getElementById('rw_m1').value,
-    m2: document.getElementById('rw_m2').value,
-    m3: document.getElementById('rw_m3').value,
-    keypoint_stride: {int(pipeline_config.get("keypoint_stride", 20))},
-    source_fused_dir: {json.dumps(source_fused_dir_ui)},
-    source_lane_images_dir: {json.dumps(source_lane_images_dir_ui)}
-  }};
-  const res = await fetch('/api/reweight', {{
-    method: 'POST',
-    headers: {{ 'Content-Type': 'application/json' }},
-    body: JSON.stringify(payload)
-  }});
-  const j = await res.json();
-  if (!j.ok) {{
-    alert(j.error || 'Failed to start reweight evaluation');
-    return;
-  }}
-  alert('Reweight evaluation started. Check progress in Run Pipeline tab.');
-  if (window.parent && typeof window.parent.switchTab === 'function') {{
-    window.parent.switchTab('runTab', window.parent.document.querySelector('.tab-btn[data-tab=\"runTab\"]'));
-  }}
-}}
 
 let reportStatusTimer = null;
 

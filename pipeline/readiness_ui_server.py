@@ -1642,9 +1642,27 @@ def ui_index() -> Response:
     .dir-item:hover {{ background:#f5f8ff; }}
     .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }}
     .badge {{ display:inline-block; padding:2px 8px; border:1px solid #cdd5de; border-radius:999px; background:#f6f8fb; font-size:11px; color:#4b5b6a; }}
-    .reweight-panel {{
+    .badge.ok {{ border-color:#b8dec0; background:#edf9f0; color:#1f6a33; }}
+    .badge.error {{ border-color:#e6b3b8; background:#fff1f2; color:#8e1f2a; }}
+    .reweight-shell {{
       border-bottom:1px solid #dde3ea;
       background:linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+    }}
+    .reweight-shell > summary {{
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:8px 12px;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:700;
+      color:#18364d;
+    }}
+    .reweight-shell > summary::-webkit-details-marker {{ display:none; }}
+    .reweight-shell[open] > summary {{ border-bottom:1px solid #dde3ea; }}
+    .reweight-panel {{
       padding:10px 12px;
       display:grid;
       grid-template-columns: repeat(3, minmax(220px, 1fr));
@@ -1674,7 +1692,7 @@ def ui_index() -> Response:
       gap:8px;
       align-items:center;
     }}
-    input[type=range] {{ width:100%; }}
+    input[type=range] {{ width:100%; padding:0; margin:0; cursor:pointer; }}
     .sum-chip {{
       display:inline-block;
       margin-top:4px;
@@ -1777,21 +1795,26 @@ def ui_index() -> Response:
           <button id="reweightBtn" onclick="startReweightFromSelected()">Re-evaluate Selected</button>
           <span class="badge" id="reportBadge">Report enabled</span>
         </div>
+        <details id="reweightShell" class="reweight-shell">
+          <summary>
+            <span>Reweight Controls</span>
+            <span id="reweightQuickStatus" class="badge">w=1.00 | m=1.00</span>
+          </summary>
         <div class="reweight-panel">
           <div class="reweight-card">
             <h4 class="reweight-title">Infrastructure Weights</h4>
             <div class="weight-row">
               <div class="weight-line"><span>w1: Physical</span><span id="rw_w1_label">0.60</span></div>
               <div class="weight-inputs">
-                <input id="rw_w1_slider" type="range" min="0" max="1" step="0.01" value="0.60" oninput="onWInput('rw_w1')" />
-                <input id="rw_w1" type="number" min="0" max="1" step="0.01" value="0.60" oninput="onWInput('rw_w1')" />
+                <input id="rw_w1_slider" type="range" min="0" max="1" step="0.01" value="0.60" oninput="onWInput('rw_w1', 'slider')" />
+                <input id="rw_w1" type="number" min="0" max="1" step="0.01" value="0.60" oninput="onWInput('rw_w1', 'input')" />
               </div>
             </div>
             <div class="weight-row">
               <div class="weight-line"><span>w2: Digital</span><span id="rw_w2_label">0.40</span></div>
               <div class="weight-inputs">
-                <input id="rw_w2_slider" type="range" min="0" max="1" step="0.01" value="0.40" oninput="onWInput('rw_w2')" />
-                <input id="rw_w2" type="number" min="0" max="1" step="0.01" value="0.40" oninput="onWInput('rw_w2')" />
+                <input id="rw_w2_slider" type="range" min="0" max="1" step="0.01" value="0.40" oninput="onWInput('rw_w2', 'slider')" />
+                <input id="rw_w2" type="number" min="0" max="1" step="0.01" value="0.40" oninput="onWInput('rw_w2', 'input')" />
               </div>
             </div>
             <span id="rw_sum_w" class="sum-chip">w1 + w2 = 1.00</span>
@@ -1801,22 +1824,22 @@ def ui_index() -> Response:
             <div class="weight-row">
               <div class="weight-line"><span>m1: Connectivity</span><span id="rw_m1_label">0.50</span></div>
               <div class="weight-inputs">
-                <input id="rw_m1_slider" type="range" min="0" max="1" step="0.01" value="0.50" oninput="onMInput('rw_m1')" />
-                <input id="rw_m1" type="number" min="0" max="1" step="0.01" value="0.50" oninput="onMInput('rw_m1')" />
+                <input id="rw_m1_slider" type="range" min="0" max="1" step="0.01" value="0.50" oninput="onMInput('rw_m1', 'slider')" />
+                <input id="rw_m1" type="number" min="0" max="1" step="0.01" value="0.50" oninput="onMInput('rw_m1', 'input')" />
               </div>
             </div>
             <div class="weight-row">
               <div class="weight-line"><span>m2: GPS</span><span id="rw_m2_label">0.40</span></div>
               <div class="weight-inputs">
-                <input id="rw_m2_slider" type="range" min="0" max="1" step="0.01" value="0.40" oninput="onMInput('rw_m2')" />
-                <input id="rw_m2" type="number" min="0" max="1" step="0.01" value="0.40" oninput="onMInput('rw_m2')" />
+                <input id="rw_m2_slider" type="range" min="0" max="1" step="0.01" value="0.40" oninput="onMInput('rw_m2', 'slider')" />
+                <input id="rw_m2" type="number" min="0" max="1" step="0.01" value="0.40" oninput="onMInput('rw_m2', 'input')" />
               </div>
             </div>
             <div class="weight-row">
               <div class="weight-line"><span>m3: HD-Map</span><span id="rw_m3_label">0.10</span></div>
               <div class="weight-inputs">
-                <input id="rw_m3_slider" type="range" min="0" max="1" step="0.01" value="0.10" oninput="onMInput('rw_m3')" />
-                <input id="rw_m3" type="number" min="0" max="1" step="0.01" value="0.10" oninput="onMInput('rw_m3')" />
+                <input id="rw_m3_slider" type="range" min="0" max="1" step="0.01" value="0.10" oninput="onMInput('rw_m3', 'slider')" />
+                <input id="rw_m3" type="number" min="0" max="1" step="0.01" value="0.10" oninput="onMInput('rw_m3', 'input')" />
               </div>
             </div>
             <span id="rw_sum_m" class="sum-chip">m1 + m2 + m3 = 1.00</span>
@@ -1835,6 +1858,7 @@ def ui_index() -> Response:
             <div id="reweightValidationMsg" class="validation-error"></div>
           </div>
         </div>
+        </details>
         <div class="dash-view">
           <div id="dashLoading" class="dash-loading">
             <div class="loading-card">
@@ -1943,9 +1967,21 @@ function readWeightField(baseId, fallback) {{
   return clampNum(toFinite(slider ? slider.value : fallback, fallback), 0, 1);
 }}
 
-function onWInput(baseId) {{
+function readWeightFieldFromSource(baseId, fallback, source) {{
+  if (source === 'slider') {{
+    const slider = document.getElementById(baseId + '_slider');
+    return clampNum(toFinite(slider ? slider.value : fallback, fallback), 0, 1);
+  }}
+  if (source === 'input') {{
+    const input = document.getElementById(baseId);
+    return clampNum(toFinite(input ? input.value : fallback, fallback), 0, 1);
+  }}
+  return readWeightField(baseId, fallback);
+}}
+
+function onWInput(baseId, source) {{
   const otherId = baseId === 'rw_w1' ? 'rw_w2' : 'rw_w1';
-  let v = round2(readWeightField(baseId, REWEIGHT_DEFAULTS[baseId.replace('rw_', '')]));
+  let v = round2(readWeightFieldFromSource(baseId, REWEIGHT_DEFAULTS[baseId.replace('rw_', '')], source));
   let other = round2(1.0 - v);
   v = round2(1.0 - other);
   setWeightField(baseId, v);
@@ -1953,10 +1989,31 @@ function onWInput(baseId) {{
   updateReweightValidation();
 }}
 
-function onMInput(baseId) {{
-  const fallbackKey = baseId.replace('rw_', '');
-  const v = readWeightField(baseId, REWEIGHT_DEFAULTS[fallbackKey]);
+function onMInput(baseId, source) {{
+  const allIds = ['rw_m1', 'rw_m2', 'rw_m3'];
+  const otherIds = allIds.filter((id) => id !== baseId);
+  let v = round2(readWeightFieldFromSource(baseId, REWEIGHT_DEFAULTS[baseId.replace('rw_', '')], source));
+  let otherA = readWeightField(otherIds[0], REWEIGHT_DEFAULTS[otherIds[0].replace('rw_', '')]);
+  let otherB = readWeightField(otherIds[1], REWEIGHT_DEFAULTS[otherIds[1].replace('rw_', '')]);
+  let remaining = round2(1.0 - v);
+  if (remaining < 0) remaining = 0;
+  const otherSum = otherA + otherB;
+  if (remaining <= 0) {{
+    otherA = 0;
+    otherB = 0;
+  }} else if (otherSum > 0) {{
+    otherA = round2((otherA / otherSum) * remaining);
+    otherB = round2(remaining - otherA);
+  }} else {{
+    otherA = round2(remaining / 2);
+    otherB = round2(remaining - otherA);
+  }}
+  if (otherA < 0) otherA = 0;
+  if (otherB < 0) otherB = 0;
+  v = round2(1.0 - otherA - otherB);
   setWeightField(baseId, v);
+  setWeightField(otherIds[0], otherA);
+  setWeightField(otherIds[1], otherB);
   updateReweightValidation();
 }}
 
@@ -2036,6 +2093,7 @@ function updateReweightValidation() {{
   const state = getReweightInputState();
   const wChip = document.getElementById('rw_sum_w');
   const mChip = document.getElementById('rw_sum_m');
+  const quick = document.getElementById('reweightQuickStatus');
   const msg = document.getElementById('reweightValidationMsg');
 
   if (wChip) {{
@@ -2047,6 +2105,11 @@ function updateReweightValidation() {{
     mChip.textContent = `m1 + m2 + m3 = ${{state.sums.mSum.toFixed(2)}}`;
     mChip.classList.remove('ok', 'error');
     mChip.classList.add(Math.abs(state.sums.mSum - 1.0) <= WEIGHT_SUM_TOL ? 'ok' : 'error');
+  }}
+  if (quick) {{
+    quick.textContent = `w=${{state.sums.wSum.toFixed(2)}} | m=${{state.sums.mSum.toFixed(2)}}`;
+    quick.classList.remove('ok', 'error');
+    quick.classList.add(state.ok ? 'ok' : 'error');
   }}
   if (msg) {{
     msg.textContent = state.ok ? '' : state.errors[0];
@@ -2190,6 +2253,24 @@ function hideDashLoading(token, overlayId) {{
   }}
 }}
 
+function removeLegacyReweightCard(frame) {{
+  if (!frame) return;
+  try {{
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    const summaries = doc.querySelectorAll('details.card > summary');
+    summaries.forEach((summary) => {{
+      const text = String(summary.textContent || '').toLowerCase();
+      if (text.includes('reweight evaluation')) {{
+        const card = summary.closest('details.card');
+        if (card) card.remove();
+      }}
+    }});
+  }} catch (err) {{
+    // Best effort for backward-compatible cleanup on older dashboard artifacts.
+  }}
+}}
+
 function loadDashboard(path, label) {{
   if (!path) return;
   dashLoadToken += 1;
@@ -2198,7 +2279,10 @@ function loadDashboard(path, label) {{
   showDashLoading(`Loading ${{runLabel}}. Large archived runs can take a bit while key point images render.`);
   const frame = document.getElementById('dash');
   if (!frame) return;
-  frame.onload = () => hideDashLoading(token);
+  frame.onload = () => {{
+    removeLegacyReweightCard(frame);
+    hideDashLoading(token);
+  }};
   frame.onerror = () => hideDashLoading(token);
   if (dashLoadTimer) clearTimeout(dashLoadTimer);
   dashLoadTimer = setTimeout(() => {{
