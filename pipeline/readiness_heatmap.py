@@ -6,6 +6,7 @@ import html
 import json
 import math
 import os
+import sys
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -18,10 +19,14 @@ from branca.colormap import LinearColormap
 import geopandas as gp
 from shapely.geometry import Point
 
-from connectivity.aggregate_by_state import OoklaSpeedLookup
-
-
+# Ensure top-level project imports work when invoked as:
+#   python3 pipeline/readiness_heatmap.py
+# (script dir would otherwise be only /.../pipeline).
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from connectivity.aggregate_by_state import OoklaSpeedLookup
 
 
 METRIC_LAYERS: List[Dict[str, str]] = [
