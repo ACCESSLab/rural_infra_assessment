@@ -3,6 +3,7 @@
 
 import json
 import hmac
+import math
 import os
 import shutil
 import signal
@@ -54,6 +55,10 @@ ARCHIVE_REFRESH_EVENTS: Dict[str, threading.Event] = {}
 
 MUTATING_ENDPOINTS = {"run", "reweight", "report", "stop", "fs_list"}
 ARTIFACT_ROOT_PREFIXES = ("results",)
+WEIGHT_SUM_TOLERANCE = 1e-3
+MIN_KEYPOINT_STRIDE = 1
+MAX_KEYPOINT_STRIDE = 200
+MAX_FRAME_STRIDE = 1000
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -144,6 +149,82 @@ def _parse_int(params: Dict[str, str], key: str, default: int) -> int:
     """Parse one integer parameter from a request payload."""
     raw = str(params.get(key, "")).strip()
     return int(raw) if raw else int(default)
+
+
+def _validate_weight_params(params: Dict[str, str]) -> Dict[str, float]:
+    """Validate weight parameters and return normalized float values."""
+    vals: Dict[str, float] = {}
+    defaults = {"w1": 0.6, "w2": 0.4, "m1": 0.5, "m2": 0.4, "m3": 0.1}
+    for key, default in defaults.items():
+        try:
+            vals[key] = _parse_float(params, key, default)
+        except Exception:
+            raise ValueError(f"{key} must be a valid number.")
+    for key, value in vals.items():
+        if not math.isfinite(value):
+            raise ValueError(f"{key} must be a finite number.")
+        if value < 0.0 or value > 1.0:
+            raise ValueError(f"{key} must be between 0.0 and 1.0.")
+
+    if abs((vals["w1"] + vals["w2"]) - 1.0) > WEIGHT_SUM_TOLERANCE:
+        raise ValueError(
+            f"Invalid weights: w1 + w2 must equal 1.0 (tolerance {WEIGHT_SUM_TOLERANCE})."
+        )
+    if abs((vals["m1"] + vals["m2"] + vals["m3"]) - 1.0) > WEIGHT_SUM_TOLERANCE:
+        raise ValueError(
+            f"Invalid weights: m1 + m2 + m3 must equal 1.0 (tolerance {WEIGHT_SUM_TOLERANCE})."
+        )
+    return vals
+
+
+def _validate_keypoint_stride(params: Dict[str, str]) -> int:
+    """Validate keypoint stride for readiness overlays."""
+    try:
+        stride = _parse_int(params, "keypoint_stride", 10)
+    except Exception:
+        raise ValueError("keypoint_stride must be an integer between 1 and 200.")
+    if stride < MIN_KEYPOINT_STRIDE or stride > MAX_KEYPOINT_STRIDE:
+        raise ValueError(
+            f"keypoint_stride must be between {MIN_KEYPOINT_STRIDE} and {MAX_KEYPOINT_STRIDE}."
+        )
+    return stride
+
+
+def _validate_frame_stride(params: Dict[str, str]) -> int:
+    """Validate frame stride used in full pipeline mode."""
+    try:
+        stride = _parse_int(params, "frame_stride", 10)
+    except Exception:
+        raise ValueError(f"frame_stride must be an integer between 1 and {MAX_FRAME_STRIDE}.")
+    if stride < 1 or stride > MAX_FRAME_STRIDE:
+        raise ValueError(f"frame_stride must be between 1 and {MAX_FRAME_STRIDE}.")
+    return stride
+
+
+def _resolve_results_path(path_value: str, field_name: str) -> Path:
+    """Resolve one path and ensure it remains under ``results/``."""
+    p = Path(path_value)
+    if not p.is_absolute():
+        p = (REPO_ROOT / p).resolve()
+    else:
+        p = p.resolve()
+    if not _path_within(p, RESULTS_DIR):
+        raise ValueError(f"{field_name} must be under {RESULTS_DIR}.")
+    return p
+
+
+def _normalize_execution_params(params: Dict[str, str], include_frame_stride: bool) -> Dict[str, str]:
+    """Validate and normalize shared run/reweight numeric parameters."""
+    out = dict(params)
+    weight_vals = _validate_weight_params(out)
+    keypoint_stride = _validate_keypoint_stride(out)
+    if include_frame_stride:
+        frame_stride = _validate_frame_stride(out)
+        out["frame_stride"] = str(frame_stride)
+    out["keypoint_stride"] = str(keypoint_stride)
+    for key, value in weight_vals.items():
+        out[key] = f"{value:.6g}"
+    return out
 
 
 def _path_within(path: Path, root: Path) -> bool:
@@ -750,6 +831,11 @@ def _start_run(params: Dict[str, str]) -> Dict[str, Any]:
         STATE["logs"] = []
         STATE["cancel_requested"] = False
 
+    try:
+        params = _normalize_execution_params(params, include_frame_stride=True)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
     bag_file = str(params.get("bag_file", "")).strip()
     if not bag_file:
         return {"ok": False, "error": "bag_file is required."}
@@ -771,12 +857,37 @@ def _start_reweight(params: Dict[str, str]) -> Dict[str, Any]:
         STATE["logs"] = []
         STATE["cancel_requested"] = False
 
-    source_fused = str(params.get("source_fused_dir", "results/fused")).strip()
-    p = Path(source_fused)
-    if not p.is_absolute():
-        p = (REPO_ROOT / p).resolve()
-    if not p.exists():
+    try:
+        params = _normalize_execution_params(params, include_frame_stride=False)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+    source_fused = str(params.get("source_fused_dir", "results/fused")).strip() or "results/fused"
+    try:
+        p = _resolve_results_path(source_fused, "source_fused_dir")
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    if not p.exists() or not p.is_dir():
         return {"ok": False, "error": f"source fused dir does not exist: {p}"}
+    params["source_fused_dir"] = p.as_posix()
+
+    source_lane = str(params.get("source_lane_images_dir", "results/lane/images")).strip() or "results/lane/images"
+    try:
+        lane_p = _resolve_results_path(source_lane, "source_lane_images_dir")
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    if lane_p.exists() and not lane_p.is_dir():
+        return {"ok": False, "error": f"source_lane_images_dir must be a directory: {lane_p}"}
+    params["source_lane_images_dir"] = lane_p.as_posix()
+
+    source_overlay = str(params.get("overlay_dir", "results/readiness/keypoint_overlays")).strip() or "results/readiness/keypoint_overlays"
+    try:
+        overlay_p = _resolve_results_path(source_overlay, "overlay_dir")
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    if overlay_p.exists() and not overlay_p.is_dir():
+        return {"ok": False, "error": f"overlay_dir must be a directory: {overlay_p}"}
+    params["overlay_dir"] = overlay_p.as_posix()
 
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     t = threading.Thread(target=_reweight_worker, args=(run_id, params), daemon=True)
@@ -1531,6 +1642,74 @@ def ui_index() -> Response:
     .dir-item:hover {{ background:#f5f8ff; }}
     .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }}
     .badge {{ display:inline-block; padding:2px 8px; border:1px solid #cdd5de; border-radius:999px; background:#f6f8fb; font-size:11px; color:#4b5b6a; }}
+    .reweight-panel {{
+      border-bottom:1px solid #dde3ea;
+      background:linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+      padding:10px 12px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap:10px;
+      align-items:start;
+    }}
+    .reweight-card {{
+      background:#fff;
+      border:1px solid #d5dee9;
+      border-radius:10px;
+      padding:10px;
+    }}
+    .reweight-title {{ margin:0 0 8px 0; font-size:13px; color:#19364c; }}
+    .weight-row {{ margin-bottom:8px; }}
+    .weight-row:last-child {{ margin-bottom:0; }}
+    .weight-line {{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:4px;
+      font-size:12px;
+      color:#334b5f;
+    }}
+    .weight-inputs {{
+      display:grid;
+      grid-template-columns: 1fr 76px;
+      gap:8px;
+      align-items:center;
+    }}
+    input[type=range] {{ width:100%; }}
+    .sum-chip {{
+      display:inline-block;
+      margin-top:4px;
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid #cdd5de;
+      background:#f5f8fc;
+      color:#465765;
+    }}
+    .sum-chip.ok {{
+      border-color:#b8dec0;
+      background:#edf9f0;
+      color:#1f6a33;
+    }}
+    .sum-chip.error {{
+      border-color:#e6b3b8;
+      background:#fff1f2;
+      color:#8e1f2a;
+    }}
+    .validation-error {{
+      margin-top:6px;
+      min-height:16px;
+      font-size:12px;
+      color:#9a1a1a;
+    }}
+    .reweight-actions {{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }}
+    @media (max-width: 1040px) {{
+      .reweight-panel {{ grid-template-columns: 1fr; }}
+    }}
   </style>
 </head>
 <body>
@@ -1567,15 +1746,10 @@ def ui_index() -> Response:
         <div class="row"><label>Frame Stride</label><input id="frame_stride" value="10"/></div>
         <div id="browseHint" class="hint">Use <b>Browse...</b> for server-side filesystem path selection. Browser local dialog is kept for convenience but does not provide reliable absolute server path.</div>
         <hr/>
-        <div class="weights">
-          <div class="row"><label>w1 (Physical Infra Weight)</label><input id="w1" value="0.6"/></div>
-          <div class="row"><label>w2 (Digital Infra Weight)</label><input id="w2" value="0.4"/></div>
-          <div class="row"><label>m1 (Connectivity in Digital)</label><input id="m1" value="0.5"/></div>
-          <div class="row"><label>m2 (GPS in Digital)</label><input id="m2" value="0.4"/></div>
-          <div class="row"><label>m3 (HD Maps in Digital)</label><input id="m3" value="0.1"/></div>
-          <div class="row"><label>keypoint_stride</label><input id="keypoint_stride" value="10"/></div>
+        <div class="notice" style="margin-top:8px;">
+          Reweight parameters are configured in the <b>Road Readiness Dashboard</b> tab using validated sliders and numeric inputs.
         </div>
-        <div class="row inline">
+        <div class="row inline" style="margin-top:10px;">
           <button id="startBtn" onclick="startRun()">Start Pipeline</button>
           <button id="stopBtn" onclick="stopRun()" disabled>Stop Pipeline</button>
         </div>
@@ -1602,6 +1776,64 @@ def ui_index() -> Response:
           <button onclick="loadSelectedRun()">Load</button>
           <button id="reweightBtn" onclick="startReweightFromSelected()">Re-evaluate Selected</button>
           <span class="badge" id="reportBadge">Report enabled</span>
+        </div>
+        <div class="reweight-panel">
+          <div class="reweight-card">
+            <h4 class="reweight-title">Infrastructure Weights</h4>
+            <div class="weight-row">
+              <div class="weight-line"><span>w1: Physical</span><span id="rw_w1_label">0.60</span></div>
+              <div class="weight-inputs">
+                <input id="rw_w1_slider" type="range" min="0" max="1" step="0.01" value="0.60" oninput="onWInput('rw_w1')" />
+                <input id="rw_w1" type="number" min="0" max="1" step="0.01" value="0.60" oninput="onWInput('rw_w1')" />
+              </div>
+            </div>
+            <div class="weight-row">
+              <div class="weight-line"><span>w2: Digital</span><span id="rw_w2_label">0.40</span></div>
+              <div class="weight-inputs">
+                <input id="rw_w2_slider" type="range" min="0" max="1" step="0.01" value="0.40" oninput="onWInput('rw_w2')" />
+                <input id="rw_w2" type="number" min="0" max="1" step="0.01" value="0.40" oninput="onWInput('rw_w2')" />
+              </div>
+            </div>
+            <span id="rw_sum_w" class="sum-chip">w1 + w2 = 1.00</span>
+          </div>
+          <div class="reweight-card">
+            <h4 class="reweight-title">Digital Sub-Weights</h4>
+            <div class="weight-row">
+              <div class="weight-line"><span>m1: Connectivity</span><span id="rw_m1_label">0.50</span></div>
+              <div class="weight-inputs">
+                <input id="rw_m1_slider" type="range" min="0" max="1" step="0.01" value="0.50" oninput="onMInput('rw_m1')" />
+                <input id="rw_m1" type="number" min="0" max="1" step="0.01" value="0.50" oninput="onMInput('rw_m1')" />
+              </div>
+            </div>
+            <div class="weight-row">
+              <div class="weight-line"><span>m2: GPS</span><span id="rw_m2_label">0.40</span></div>
+              <div class="weight-inputs">
+                <input id="rw_m2_slider" type="range" min="0" max="1" step="0.01" value="0.40" oninput="onMInput('rw_m2')" />
+                <input id="rw_m2" type="number" min="0" max="1" step="0.01" value="0.40" oninput="onMInput('rw_m2')" />
+              </div>
+            </div>
+            <div class="weight-row">
+              <div class="weight-line"><span>m3: HD-Map</span><span id="rw_m3_label">0.10</span></div>
+              <div class="weight-inputs">
+                <input id="rw_m3_slider" type="range" min="0" max="1" step="0.01" value="0.10" oninput="onMInput('rw_m3')" />
+                <input id="rw_m3" type="number" min="0" max="1" step="0.01" value="0.10" oninput="onMInput('rw_m3')" />
+              </div>
+            </div>
+            <span id="rw_sum_m" class="sum-chip">m1 + m2 + m3 = 1.00</span>
+          </div>
+          <div class="reweight-card">
+            <h4 class="reweight-title">Reweight Options</h4>
+            <div class="row" style="margin-bottom:6px;">
+              <label for="rw_keypoint_stride" style="margin-bottom:4px;">Keypoint stride (1-200)</label>
+              <input id="rw_keypoint_stride" type="number" min="1" max="200" step="1" value="10" oninput="updateReweightValidation()" />
+            </div>
+            <div class="hint">Rules: <code>w1 + w2 = 1.0</code> and <code>m1 + m2 + m3 = 1.0</code>.</div>
+            <div class="reweight-actions">
+              <button type="button" onclick="normalizeMWeights()">Normalize m1/m2/m3</button>
+              <button type="button" onclick="resetReweightDefaults()">Reset Defaults</button>
+            </div>
+            <div id="reweightValidationMsg" class="validation-error"></div>
+          </div>
         </div>
         <div class="dash-view">
           <div id="dashLoading" class="dash-loading">
@@ -1668,6 +1900,160 @@ let dashLoadToken = 0;
 let dashLoadTimer = null;
 let allEvaluationsLoaded = false;
 let runsByDashboardPath = {{}};
+let reweightInputsValid = true;
+const REWEIGHT_DEFAULTS = Object.freeze({{
+  w1: 0.6,
+  w2: 0.4,
+  m1: 0.5,
+  m2: 0.4,
+  m3: 0.1,
+  keypoint_stride: 10
+}});
+const WEIGHT_SUM_TOL = 0.001;
+
+function clampNum(value, minVal, maxVal) {{
+  if (!Number.isFinite(value)) return minVal;
+  return Math.min(maxVal, Math.max(minVal, value));
+}}
+
+function round2(value) {{
+  return Math.round(value * 100) / 100;
+}}
+
+function toFinite(value, fallback) {{
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}}
+
+function setWeightField(baseId, value) {{
+  const normalized = round2(clampNum(value, 0, 1));
+  const slider = document.getElementById(baseId + '_slider');
+  const input = document.getElementById(baseId);
+  const label = document.getElementById(baseId + '_label');
+  const formatted = normalized.toFixed(2);
+  if (slider) slider.value = formatted;
+  if (input) input.value = formatted;
+  if (label) label.textContent = formatted;
+}}
+
+function readWeightField(baseId, fallback) {{
+  const input = document.getElementById(baseId);
+  if (input) return clampNum(toFinite(input.value, fallback), 0, 1);
+  const slider = document.getElementById(baseId + '_slider');
+  return clampNum(toFinite(slider ? slider.value : fallback, fallback), 0, 1);
+}}
+
+function onWInput(baseId) {{
+  const otherId = baseId === 'rw_w1' ? 'rw_w2' : 'rw_w1';
+  let v = round2(readWeightField(baseId, REWEIGHT_DEFAULTS[baseId.replace('rw_', '')]));
+  let other = round2(1.0 - v);
+  v = round2(1.0 - other);
+  setWeightField(baseId, v);
+  setWeightField(otherId, other);
+  updateReweightValidation();
+}}
+
+function onMInput(baseId) {{
+  const fallbackKey = baseId.replace('rw_', '');
+  const v = readWeightField(baseId, REWEIGHT_DEFAULTS[fallbackKey]);
+  setWeightField(baseId, v);
+  updateReweightValidation();
+}}
+
+function normalizeMWeights() {{
+  let m1 = readWeightField('rw_m1', REWEIGHT_DEFAULTS.m1);
+  let m2 = readWeightField('rw_m2', REWEIGHT_DEFAULTS.m2);
+  let m3 = readWeightField('rw_m3', REWEIGHT_DEFAULTS.m3);
+  const total = m1 + m2 + m3;
+  if (total <= 0) {{
+    m1 = REWEIGHT_DEFAULTS.m1;
+    m2 = REWEIGHT_DEFAULTS.m2;
+    m3 = REWEIGHT_DEFAULTS.m3;
+  }} else {{
+    m1 = round2(m1 / total);
+    m2 = round2(m2 / total);
+    m3 = round2(1.0 - m1 - m2);
+    if (m3 < 0) m3 = 0;
+    const correctedM1 = round2(1.0 - m2 - m3);
+    m1 = clampNum(correctedM1, 0, 1);
+  }}
+  setWeightField('rw_m1', m1);
+  setWeightField('rw_m2', m2);
+  setWeightField('rw_m3', m3);
+  updateReweightValidation();
+}}
+
+function resetReweightDefaults() {{
+  setWeightField('rw_w1', REWEIGHT_DEFAULTS.w1);
+  setWeightField('rw_w2', REWEIGHT_DEFAULTS.w2);
+  setWeightField('rw_m1', REWEIGHT_DEFAULTS.m1);
+  setWeightField('rw_m2', REWEIGHT_DEFAULTS.m2);
+  setWeightField('rw_m3', REWEIGHT_DEFAULTS.m3);
+  const stride = document.getElementById('rw_keypoint_stride');
+  if (stride) stride.value = String(REWEIGHT_DEFAULTS.keypoint_stride);
+  updateReweightValidation();
+}}
+
+function getReweightInputState() {{
+  const w1 = readWeightField('rw_w1', REWEIGHT_DEFAULTS.w1);
+  const w2 = readWeightField('rw_w2', REWEIGHT_DEFAULTS.w2);
+  const m1 = readWeightField('rw_m1', REWEIGHT_DEFAULTS.m1);
+  const m2 = readWeightField('rw_m2', REWEIGHT_DEFAULTS.m2);
+  const m3 = readWeightField('rw_m3', REWEIGHT_DEFAULTS.m3);
+  const wSum = w1 + w2;
+  const mSum = m1 + m2 + m3;
+
+  const strideInput = document.getElementById('rw_keypoint_stride');
+  const strideRaw = strideInput ? String(strideInput.value || '').trim() : '';
+  const keypointStride = Number(strideRaw);
+
+  const errors = [];
+  if (Math.abs(wSum - 1.0) > WEIGHT_SUM_TOL) errors.push('w1 + w2 must equal 1.00.');
+  if (Math.abs(mSum - 1.0) > WEIGHT_SUM_TOL) errors.push('m1 + m2 + m3 must equal 1.00.');
+  if (!Number.isInteger(keypointStride) || keypointStride < 1 || keypointStride > 200) {{
+    errors.push('keypoint_stride must be an integer between 1 and 200.');
+  }}
+
+  return {{
+    ok: errors.length === 0,
+    errors,
+    values: {{
+      w1: round2(w1).toFixed(2),
+      w2: round2(w2).toFixed(2),
+      m1: round2(m1).toFixed(2),
+      m2: round2(m2).toFixed(2),
+      m3: round2(m3).toFixed(2),
+      keypoint_stride: String(Number.isInteger(keypointStride) ? keypointStride : REWEIGHT_DEFAULTS.keypoint_stride)
+    }},
+    sums: {{
+      wSum: round2(wSum),
+      mSum: round2(mSum)
+    }}
+  }};
+}}
+
+function updateReweightValidation() {{
+  const state = getReweightInputState();
+  const wChip = document.getElementById('rw_sum_w');
+  const mChip = document.getElementById('rw_sum_m');
+  const msg = document.getElementById('reweightValidationMsg');
+
+  if (wChip) {{
+    wChip.textContent = `w1 + w2 = ${{state.sums.wSum.toFixed(2)}}`;
+    wChip.classList.remove('ok', 'error');
+    wChip.classList.add(Math.abs(state.sums.wSum - 1.0) <= WEIGHT_SUM_TOL ? 'ok' : 'error');
+  }}
+  if (mChip) {{
+    mChip.textContent = `m1 + m2 + m3 = ${{state.sums.mSum.toFixed(2)}}`;
+    mChip.classList.remove('ok', 'error');
+    mChip.classList.add(Math.abs(state.sums.mSum - 1.0) <= WEIGHT_SUM_TOL ? 'ok' : 'error');
+  }}
+  if (msg) {{
+    msg.textContent = state.ok ? '' : state.errors[0];
+  }}
+  reweightInputsValid = state.ok;
+  return state;
+}}
 
 function switchTab(tabId, btn) {{
   for (const el of document.querySelectorAll('.tab-panel')) el.classList.remove('active');
@@ -1763,6 +2149,7 @@ function applyDeploymentMode() {{
   if (reportBadge) {{
     reportBadge.textContent = APP_CONFIG.enableReportRegen ? 'Report enabled' : 'Report disabled';
   }}
+  updateReweightValidation();
 }}
 
 async function fetchRuns() {{
@@ -1862,16 +2249,16 @@ function ensureAllEvaluationsLoaded(force = false) {{
   }}
 }}
 
-function buildReweightPayload(runMeta) {{
+function buildReweightPayload(runMeta, weights) {{
   return {{
     source_fused_dir: runMeta.source_fused_dir,
     source_lane_images_dir: runMeta.source_lane_images_dir,
-    w1: document.getElementById('w1').value,
-    w2: document.getElementById('w2').value,
-    m1: document.getElementById('m1').value,
-    m2: document.getElementById('m2').value,
-    m3: document.getElementById('m3').value,
-    keypoint_stride: document.getElementById('keypoint_stride').value
+    w1: weights.w1,
+    w2: weights.w2,
+    m1: weights.m1,
+    m2: weights.m2,
+    m3: weights.m3,
+    keypoint_stride: weights.keypoint_stride
   }};
 }}
 
@@ -1889,17 +2276,22 @@ async function startRun() {{
     alert('Full rosbag pipeline is disabled in this deployment.');
     return;
   }}
+  const rwState = updateReweightValidation();
+  if (!rwState.ok) {{
+    alert(rwState.errors[0] || 'Invalid reweight parameters.');
+    return;
+  }}
   if (!requireTokenIfNeeded()) return;
   saveApiToken();
   const payload = {{
     bag_file: document.getElementById('bag_file').value,
     frame_stride: document.getElementById('frame_stride').value,
-    w1: document.getElementById('w1').value,
-    w2: document.getElementById('w2').value,
-    m1: document.getElementById('m1').value,
-    m2: document.getElementById('m2').value,
-    m3: document.getElementById('m3').value,
-    keypoint_stride: document.getElementById('keypoint_stride').value
+    w1: rwState.values.w1,
+    w2: rwState.values.w2,
+    m1: rwState.values.m1,
+    m2: rwState.values.m2,
+    m3: rwState.values.m3,
+    keypoint_stride: rwState.values.keypoint_stride
   }};
   const res = await fetch('/api/run', {{ method:'POST', headers: jsonHeaders(), body: JSON.stringify(payload) }});
   const j = await res.json();
@@ -1930,7 +2322,12 @@ async function startReweightFromSelected() {{
     return;
   }}
 
-  const payload = buildReweightPayload(runMeta);
+  const rwState = updateReweightValidation();
+  if (!rwState.ok) {{
+    alert(rwState.errors[0] || 'Invalid reweight parameters.');
+    return;
+  }}
+  const payload = buildReweightPayload(runMeta, rwState.values);
   const res = await fetch('/api/reweight', {{ method:'POST', headers: jsonHeaders(), body: JSON.stringify(payload) }});
   const j = await res.json();
   if (!j.ok) {{
@@ -1964,8 +2361,9 @@ async function poll() {{
   const running = Boolean(j.running);
   document.getElementById('startBtn').disabled = running || !APP_CONFIG.enableFullPipeline;
   document.getElementById('stopBtn').disabled = !running;
+  const rwState = updateReweightValidation();
   const reBtn = document.getElementById('reweightBtn');
-  if (reBtn) reBtn.disabled = running || !APP_CONFIG.enableReevaluation;
+  if (reBtn) reBtn.disabled = running || !APP_CONFIG.enableReevaluation || !rwState.ok;
 
   if (j.stage === 'completed' && j.reload_dashboard_on_complete && j.dashboard_path && j.last_run_id && j.last_run_id !== lastLoadedRunId) {{
     loadDashboard(j.dashboard_path, 'latest run');
@@ -2040,6 +2438,7 @@ async function loadDir(path) {{
 }}
 
 applyDeploymentMode();
+resetReweightDefaults();
 setInterval(poll, 2000);
 poll();
 fetchRuns();

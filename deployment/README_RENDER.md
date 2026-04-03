@@ -25,6 +25,16 @@ The UI server now supports deployment flags:
 - `ENABLE_FS_BROWSER=false` (disables server directory browsing endpoint)
 - `APP_API_TOKEN` optional bearer token to protect mutating endpoints
 
+Public-facing UX hardening now included:
+
+- Reweight controls use slider + numeric inputs with live validation.
+- Client-side checks block invalid submissions before API calls.
+- Server-side checks enforce:
+  - `w1 + w2 = 1.0`
+  - `m1 + m2 + m3 = 1.0`
+  - `keypoint_stride` in `[1, 200]`
+  - reweight source paths restricted to `results/**`
+
 Mutating endpoints protected by optional token:
 
 - `POST /api/run`
