@@ -71,8 +71,8 @@ def _env_bool(name: str, default: bool) -> bool:
 
 PUBLIC_MODE = _env_bool("PUBLIC_MODE", False)
 ENABLE_FULL_PIPELINE = _env_bool("ENABLE_FULL_PIPELINE", not PUBLIC_MODE)
-ENABLE_REEVALUATION = _env_bool("ENABLE_REEVALUATION", True)
-ENABLE_REPORT_REGEN = _env_bool("ENABLE_REPORT_REGEN", True)
+ENABLE_REEVALUATION = _env_bool("ENABLE_REEVALUATION", not PUBLIC_MODE)
+ENABLE_REPORT_REGEN = _env_bool("ENABLE_REPORT_REGEN", not PUBLIC_MODE)
 ENABLE_FS_BROWSER = _env_bool("ENABLE_FS_BROWSER", False if PUBLIC_MODE else True)
 APP_API_TOKEN = os.getenv("APP_API_TOKEN", "").strip()
 
@@ -1733,7 +1733,7 @@ def ui_index() -> Response:
 <body>
 <div class="root">
   <div class="tabs">
-    <button class="tab-btn" data-tab="runTab" onclick="switchTab('runTab', this)">Run Pipeline</button>
+    <button id="runTabBtn" class="tab-btn" data-tab="runTab" onclick="switchTab('runTab', this)">Run Pipeline</button>
     <button class="tab-btn active" data-tab="dashTab" onclick="switchTab('dashTab', this)">Road Readiness Dashboard</button>
     <button class="tab-btn" data-tab="allDashTab" onclick="switchTab('allDashTab', this); ensureAllEvaluationsLoaded();">All Evaluated Results</button>
   </div>
@@ -1745,7 +1745,7 @@ def ui_index() -> Response:
       <div class="run-wrap">
         <h3 style="margin-top:0;">Run Pipeline</h3>
         <div id="pipelineDisabledNotice" class="notice hidden">
-          Full rosbag processing is disabled in this deployment. You can still run re-evaluation from the dashboard tab.
+          Full rosbag processing is disabled in this deployment.
         </div>
         <div class="row" id="tokenRow">
           <label>API Token (if required by deployment)</label>
@@ -2184,6 +2184,8 @@ function applyDeploymentMode() {{
   if (tokenInput) tokenInput.addEventListener('change', saveApiToken);
 
   if (!APP_CONFIG.enableFullPipeline) {{
+    const runTabBtn = document.getElementById('runTabBtn');
+    if (APP_CONFIG.publicMode && runTabBtn) runTabBtn.classList.add('hidden');
     const notice = document.getElementById('pipelineDisabledNotice');
     if (notice) notice.classList.remove('hidden');
     const bag = document.getElementById('bag_file');
@@ -2205,12 +2207,17 @@ function applyDeploymentMode() {{
 
   if (!APP_CONFIG.enableReevaluation) {{
     const rb = document.getElementById('reweightBtn');
-    if (rb) rb.disabled = true;
+    if (rb) {{
+      rb.disabled = true;
+      if (APP_CONFIG.publicMode) rb.classList.add('hidden');
+    }}
+    const shell = document.getElementById('reweightShell');
+    if (APP_CONFIG.publicMode && shell) shell.classList.add('hidden');
   }}
 
   const reportBadge = document.getElementById('reportBadge');
   if (reportBadge) {{
-    reportBadge.textContent = APP_CONFIG.enableReportRegen ? 'Report enabled' : 'Report disabled';
+    reportBadge.textContent = APP_CONFIG.enableReportRegen ? 'Report enabled' : 'View-only';
   }}
   updateReweightValidation();
 }}
@@ -2271,6 +2278,17 @@ function removeLegacyReweightCard(frame) {{
   }}
 }}
 
+function removeViewOnlyActions(frame) {{
+  if (!frame || APP_CONFIG.enableReportRegen) return;
+  try {{
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    doc.querySelectorAll('.report-action').forEach((el) => el.remove());
+  }} catch (err) {{
+    // Best effort for older generated dashboards served from the same app.
+  }}
+}}
+
 function loadDashboard(path, label) {{
   if (!path) return;
   dashLoadToken += 1;
@@ -2281,6 +2299,7 @@ function loadDashboard(path, label) {{
   if (!frame) return;
   frame.onload = () => {{
     removeLegacyReweightCard(frame);
+    removeViewOnlyActions(frame);
     hideDashLoading(token);
   }};
   frame.onerror = () => hideDashLoading(token);
@@ -2303,7 +2322,10 @@ function loadFrame(frameId, overlayId, textId, path, label, initialMessage, slow
   if (overlay) overlay.classList.remove('hidden');
   const frame = document.getElementById(frameId);
   if (!frame) return;
-  frame.onload = () => hideDashLoading(token, overlayId);
+  frame.onload = () => {{
+    removeViewOnlyActions(frame);
+    hideDashLoading(token, overlayId);
+  }};
   frame.onerror = () => hideDashLoading(token, overlayId);
   if (dashLoadTimer) clearTimeout(dashLoadTimer);
   dashLoadTimer = setTimeout(() => {{

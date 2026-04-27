@@ -121,13 +121,14 @@ Important deployment settings:
 - `PYTHON_VERSION=3.11.11`
 - `PUBLIC_MODE=true`
 - `ENABLE_FULL_PIPELINE=false`
-- `ENABLE_REEVALUATION=true`
+- `ENABLE_REEVALUATION=false`
 - `ENABLE_REPORT_REGEN=false`
 - `ENABLE_FS_BROWSER=false`
 
-These defaults make the public deployment suitable for browsing existing
-artifacts and reweighting/re-evaluating the included results, while disabling
-filesystem browsing and full raw-pipeline execution.
+These defaults make the public deployment view-only. Visitors can browse
+existing artifacts, maps, dashboards, and reports, while filesystem browsing,
+full raw-pipeline execution, re-evaluation, and report regeneration remain
+disabled.
 
 ## Data Notes
 

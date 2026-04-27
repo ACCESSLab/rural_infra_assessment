@@ -14,9 +14,9 @@ services:
       - key: ENABLE_FULL_PIPELINE
         value: "false"
       - key: ENABLE_REEVALUATION
-        value: "true"
+        value: "false"
       - key: ENABLE_REPORT_REGEN
-        value: "true"
+        value: "false"
       - key: ENABLE_FS_BROWSER
         value: "false"
       - key: APP_API_TOKEN
