@@ -1763,8 +1763,8 @@ def ui_index() -> Response:
           <label>Rosbag Path</label>
           <div class="inline">
             <input id="bag_file" value="{default_bag}" />
-            <button id="browseBtn" type="button" onclick="openBrowser()">Browse...</button>
-            <button id="localDialogBtn" type="button" onclick="openLocalDialog()">Local Dialog</button>
+            <button id="browseBtn" type="button" onclick="openBrowser() disabled">Browse...</button>
+            <button id="localDialogBtn" type="button" onclick="openLocalDialog()" disabled>Local Dialog</button>
             <input id="bag_picker" type="file" webkitdirectory directory multiple class="hidden" onchange="handleLocalDialog(event)" />
           </div>
         </div>
@@ -1775,7 +1775,7 @@ def ui_index() -> Response:
           Reweight parameters are configured in the <b>Road Readiness Dashboard</b> tab using validated sliders and numeric inputs.
         </div>
         <div class="row inline" style="margin-top:10px;">
-          <button id="startBtn" onclick="startRun()">Start Pipeline</button>
+          <button id="startBtn" onclick="startRun() disabled">Start Pipeline</button>
           <button id="stopBtn" onclick="stopRun()" disabled>Stop Pipeline</button>
         </div>
         <div class="status" style="margin-top:8px;">
@@ -1799,7 +1799,7 @@ def ui_index() -> Response:
           <label style="margin:0;">Archived Run</label>
           <select id="runSelect" style="max-width:420px;"></select>
           <button onclick="loadSelectedRun()">Load</button>
-          <button id="reweightBtn" onclick="startReweightFromSelected()">Re-evaluate Selected</button>
+          <button id="reweightBtn" onclick="startReweightFromSelected() disabled">Re-evaluate Selected</button>
           <span class="badge" id="reportBadge">Report enabled</span>
         </div>
         <details id="reweightShell" class="reweight-shell">
@@ -1906,7 +1906,7 @@ def ui_index() -> Response:
   <div class="modal">
     <div class="modal-head">
       <input id="browserPath" class="mono" style="flex:1;" />
-      <button onclick="goBrowserPath()">Go</button>
+      <button onclick="goBrowserPath() disabled">Go</button>
       <button onclick="selectCurrentPath()">Select This Folder</button>
       <button onclick="closeBrowser()">Close</button>
     </div>

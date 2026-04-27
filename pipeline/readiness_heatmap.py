@@ -2048,7 +2048,7 @@ def _build_multi_run_dashboard_html(
             report_action_html = ""
             if report_regen_enabled:
                 report_action_html = (
-                    f'<span class="report-action"><button type="button" onclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps(label + " report")})\' '
+                    f'<span class="report-action"><button type="button" disabledonclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps(label + " report")})\' '
                     'style="margin-left:6px;padding:4px 8px;border:1px solid #c7d0d9;border-radius:8px;background:#fff;cursor:pointer;">'
                     'Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;"></span></span>'
                 )
