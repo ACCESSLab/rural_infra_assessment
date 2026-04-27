@@ -16,7 +16,7 @@ services:
       - key: ENABLE_REEVALUATION
         value: "true"
       - key: ENABLE_REPORT_REGEN
-        value: "false"
+        value: "true"
       - key: ENABLE_FS_BROWSER
         value: "false"
       - key: APP_API_TOKEN
