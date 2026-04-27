@@ -1151,7 +1151,7 @@ def _build_dashboard_html(
     report_action_html = (
         f' <span class="report-action"><button type="button" onclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps("current report")})\' style="margin-left:6px;padding:4px 8px;border:1px solid rgba(255,255,255,0.35);border-radius:8px;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;">Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;opacity:0.9;"></span></span>'
         if report_regen_enabled
-        else ""
+        else ' <span class="report-action"><button type="button" disabled title="Report regeneration is disabled in this view-only deployment." style="margin-left:6px;padding:4px 8px;border:1px solid #c9ced6;border-radius:8px;background:#e5e7eb;color:#7a828a;cursor:not-allowed;opacity:0.72;">Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;opacity:0.9;"></span></span>'
     )
     mile_summary_rows = []
     for m in per_mile:
@@ -2050,6 +2050,12 @@ def _build_multi_run_dashboard_html(
                 report_action_html = (
                     f'<span class="report-action"><button type="button" onclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps(label + " report")})\' '
                     'style="margin-left:6px;padding:4px 8px;border:1px solid #c7d0d9;border-radius:8px;background:#fff;cursor:pointer;">'
+                    'Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;"></span></span>'
+                )
+            else:
+                report_action_html = (
+                    '<span class="report-action"><button type="button" disabled title="Report regeneration is disabled in this view-only deployment." '
+                    'style="margin-left:6px;padding:4px 8px;border:1px solid #c9ced6;border-radius:8px;background:#e5e7eb;color:#7a828a;cursor:not-allowed;opacity:0.72;">'
                     'Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;"></span></span>'
                 )
             report_html = (

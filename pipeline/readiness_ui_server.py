@@ -1607,6 +1607,13 @@ def ui_index() -> Response:
     label {{ font-size:12px; color:#444; display:block; margin-bottom:4px; }}
     input, select {{ width:100%; box-sizing:border-box; padding:7px; }}
     button {{ padding:8px 12px; }}
+    button:disabled {{
+      color:#7a828a;
+      background:#e5e7eb;
+      border-color:#c9ced6;
+      cursor:not-allowed;
+      opacity:0.72;
+    }}
     .weights {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
     .hint {{ font-size:12px; color:#666; }}
     .notice {{ margin-bottom:12px; border-radius:8px; border:1px solid #d8dde4; background:#fff; padding:10px 12px; font-size:12px; color:#334; }}
@@ -2184,18 +2191,18 @@ function applyDeploymentMode() {{
   if (tokenInput) tokenInput.addEventListener('change', saveApiToken);
 
   if (!APP_CONFIG.enableFullPipeline) {{
-    const runTabBtn = document.getElementById('runTabBtn');
-    if (APP_CONFIG.publicMode && runTabBtn) runTabBtn.classList.add('hidden');
     const notice = document.getElementById('pipelineDisabledNotice');
     if (notice) notice.classList.remove('hidden');
     const bag = document.getElementById('bag_file');
     const frameStride = document.getElementById('frame_stride');
     const browseBtn = document.getElementById('browseBtn');
     const localDialogBtn = document.getElementById('localDialogBtn');
+    const startBtn = document.getElementById('startBtn');
     if (bag) bag.disabled = true;
     if (frameStride) frameStride.disabled = true;
     if (browseBtn) browseBtn.disabled = true;
     if (localDialogBtn) localDialogBtn.disabled = true;
+    if (startBtn) startBtn.disabled = true;
   }}
 
   if (!APP_CONFIG.enableFsBrowser) {{
@@ -2209,10 +2216,7 @@ function applyDeploymentMode() {{
     const rb = document.getElementById('reweightBtn');
     if (rb) {{
       rb.disabled = true;
-      if (APP_CONFIG.publicMode) rb.classList.add('hidden');
     }}
-    const shell = document.getElementById('reweightShell');
-    if (APP_CONFIG.publicMode && shell) shell.classList.add('hidden');
   }}
 
   const reportBadge = document.getElementById('reportBadge');
@@ -2278,12 +2282,21 @@ function removeLegacyReweightCard(frame) {{
   }}
 }}
 
-function removeViewOnlyActions(frame) {{
+function disableViewOnlyActions(frame) {{
   if (!frame || APP_CONFIG.enableReportRegen) return;
   try {{
     const doc = frame.contentDocument;
     if (!doc) return;
-    doc.querySelectorAll('.report-action').forEach((el) => el.remove());
+    doc.querySelectorAll('.report-action button').forEach((button) => {{
+      button.disabled = true;
+      button.title = 'Report regeneration is disabled in this view-only deployment.';
+      button.style.color = '#7a828a';
+      button.style.background = '#e5e7eb';
+      button.style.borderColor = '#c9ced6';
+      button.style.cursor = 'not-allowed';
+      button.style.opacity = '0.72';
+      button.onclick = null;
+    }});
   }} catch (err) {{
     // Best effort for older generated dashboards served from the same app.
   }}
@@ -2299,7 +2312,7 @@ function loadDashboard(path, label) {{
   if (!frame) return;
   frame.onload = () => {{
     removeLegacyReweightCard(frame);
-    removeViewOnlyActions(frame);
+    disableViewOnlyActions(frame);
     hideDashLoading(token);
   }};
   frame.onerror = () => hideDashLoading(token);
@@ -2323,7 +2336,7 @@ function loadFrame(frameId, overlayId, textId, path, label, initialMessage, slow
   const frame = document.getElementById(frameId);
   if (!frame) return;
   frame.onload = () => {{
-    removeViewOnlyActions(frame);
+    disableViewOnlyActions(frame);
     hideDashLoading(token, overlayId);
   }};
   frame.onerror = () => hideDashLoading(token, overlayId);
