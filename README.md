@@ -21,7 +21,12 @@ included route data.
 - Supports Render deployment with a locked Python runtime for geospatial
   dependencies.
 
-## Readiness Signals
+  <img src="sample_images/main_dashboard.png" width="400" />
+  <img src="sample_images/all_results.png" width="400" />
+  <img src="sample_images/eval_pipeline.png" width="400" />
+
+
+## Readiness Components
 
 The readiness index is built from several components:
 
