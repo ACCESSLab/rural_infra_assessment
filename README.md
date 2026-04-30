@@ -10,7 +10,9 @@ The current repository is packaged as a lightweight public/demo subset: it
 includes the Flask web UI, scoring and reporting scripts, Render deployment
 configuration, and precomputed artifacts needed to browse and re-evaluate the
 included route data.
-
+<img src="sample_images/main_dashboard.png" width="680" />
+<img src="sample_images/all_results.png" width="680" /> <br/>
+<!-- <img src="sample_images/eval_pipeline.png" width="600" /> -->
 ## What This Project Does
 
 - Scores road segments using physical and digital infrastructure signals.
@@ -20,10 +22,6 @@ included route data.
 - Compiles evaluation results into a shareable PDF research report.
 - Supports Render deployment with a locked Python runtime for geospatial
   dependencies.
-
-  <img src="sample_images/main_dashboard.png" width="400" />
-  <img src="sample_images/all_results.png" width="400" />
-  <img src="sample_images/eval_pipeline.png" width="400" />
 
 
 ## Readiness Components
