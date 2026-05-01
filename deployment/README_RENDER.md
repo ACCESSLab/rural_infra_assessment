@@ -42,8 +42,12 @@ Artifact serving is restricted to `results/**` paths only.
 ## Suggested Render setup flow
 
 1. Push this branch to your remote repository.
-2. Create a new Render Web Service from that repo.
-3. If using Blueprint, let Render detect `render.yaml`.
+2. Create a new Render **Web Service** from that repo, or use Render Blueprint.
+   Do not create a Static Site. This Flask app has no `build/` publish directory,
+   so Static Site deploys fail with `Publish directory build does not exist`.
+3. If using Blueprint, let Render detect `render.yaml`. If deploying from the
+   repository root, use the root `render.yaml`; it points Render at the
+   `rural_infra_assessment` service root.
 4. Set `MAPBOX_TOKEN` in the Render dashboard if Mapbox basemap support is used.
 5. Deploy and validate:
    - Dashboard loads

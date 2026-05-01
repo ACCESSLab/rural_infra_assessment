@@ -121,6 +121,11 @@ configured, so set `OPENAI_API_KEY` if you enable that workflow.
 The repository includes a Render configuration in `render.yaml`. The hosted app
 uses Gunicorn to serve `pipeline.readiness_ui_server:app`.
 
+Create the Render service as a **Web Service** or deploy from the Blueprint
+`render.yaml`. Do not create it as a **Static Site**. A Static Site deploy will
+look for a frontend publish directory such as `build/`, which this Flask app
+does not create.
+
 Important deployment settings:
 
 - `PYTHON_VERSION=3.11.11`
