@@ -9,7 +9,9 @@ through interactive maps, dashboards, and a generated research report.
 The current repository is packaged as a lightweight public/demo subset: it
 includes the Flask web UI, scoring and reporting scripts, Render deployment
 configuration, and precomputed artifacts needed to browse the included route
-data in a view-only deployment.
+data in a view-only deployment. 
+> https://rural-infrastructure-assessment.onrender.com/
+
 <img src="sample_images/main_dashboard.png" width="680" />
 <img src="sample_images/all_results.png" width="680" /> <br/>
 <!-- <img src="sample_images/eval_pipeline.png" width="600" /> -->
@@ -83,6 +85,8 @@ This project is tested with Python 3.11. The runtime is pinned to `3.11.11` in
 conda create -n rural-infra python=3.11.11
 conda activate rural-infra
 pip install --upgrade pip
+git clone https://github.com/ACCESSLab/rural_infra_assessment
+cd rural_infra_assessment
 pip install -r requirements.txt
 python3 pipeline/readiness_ui_server.py
 ```
