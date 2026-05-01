@@ -8,8 +8,8 @@ through interactive maps, dashboards, and a generated research report.
 
 The current repository is packaged as a lightweight public/demo subset: it
 includes the Flask web UI, scoring and reporting scripts, Render deployment
-configuration, and precomputed artifacts needed to browse and re-evaluate the
-included route data.
+configuration, and precomputed artifacts needed to browse the included route
+data in a view-only deployment.
 <img src="sample_images/main_dashboard.png" width="680" />
 <img src="sample_images/all_results.png" width="680" /> <br/>
 <!-- <img src="sample_images/eval_pipeline.png" width="600" /> -->
@@ -18,7 +18,7 @@ included route data.
 - Scores road segments using physical and digital infrastructure signals.
 - Aggregates frame-level evaluations into per-mile readiness summaries.
 - Generates interactive Folium maps and HTML dashboards for route inspection.
-- Provides a Flask UI for browsing outputs and adjusting score weights.
+- Provides a Flask UI for browsing precomputed outputs.
 - Compiles evaluation results into a shareable PDF research report.
 - Supports Render deployment with a locked Python runtime for geospatial
   dependencies.
@@ -36,8 +36,9 @@ The readiness index is built from several components:
   component.
 
 The default score combines physical and digital infrastructure using the
-weights in the evaluation pipeline. These can be adjusted through the UI or
-command-line options.
+weights in the evaluation pipeline. For this deployment subset, the hosted UI is
+view-only; weights can be changed only when regenerating artifacts locally from
+the command line.
 
 ## Repository Structure
 
@@ -79,15 +80,16 @@ This project is tested with Python 3.11. The runtime is pinned to `3.11.11` in
 `.python-version` to avoid geospatial package build issues on newer runtimes.
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+conda create -n rural-infra python=3.11.11
+conda activate rural-infra
 pip install --upgrade pip
 pip install -r requirements.txt
 python3 pipeline/readiness_ui_server.py
 ```
 
 Then open the local URL printed by the server. By default, the UI binds to
-`127.0.0.1:8765`.
+`127.0.0.1:8765`. The local server uses the same view-only defaults as the
+Render deployment unless you explicitly change the feature flags.
 
 ## Regenerate Evaluation Artifacts
 
