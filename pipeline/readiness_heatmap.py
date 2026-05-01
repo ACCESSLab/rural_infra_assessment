@@ -1147,7 +1147,7 @@ def _build_dashboard_html(
     readiness_rel = os.path.relpath(readiness_json_path.as_posix(), out_dashboard.parent.as_posix())
     report_rel = os.path.relpath(report_pdf_path.as_posix(), out_dashboard.parent.as_posix())
     report_results_dir = _path_for_ui(report_pdf_path.parent)
-    report_regen_enabled = os.getenv("ENABLE_REPORT_REGEN", "true").strip().lower() in {"1", "true", "yes", "y", "on"}
+    report_regen_enabled = os.getenv("ENABLE_REPORT_REGEN", "false").strip().lower() in {"1", "true", "yes", "y", "on"}
     report_action_html = (
         f' <span class="report-action"><button type="button" onclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps("current report")})\' style="margin-left:6px;padding:4px 8px;border:1px solid rgba(255,255,255,0.35);border-radius:8px;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;">Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;opacity:0.9;"></span></span>'
         if report_regen_enabled
@@ -2043,12 +2043,12 @@ def _build_multi_run_dashboard_html(
         )
         report_results_dir = _path_for_ui(Path(report_path).parent) if report_path else None
         report_html = "Unavailable"
-        report_regen_enabled = os.getenv("ENABLE_REPORT_REGEN", "true").strip().lower() in {"1", "true", "yes", "y", "on"}
+        report_regen_enabled = os.getenv("ENABLE_REPORT_REGEN", "false").strip().lower() in {"1", "true", "yes", "y", "on"}
         if report_rel and report_results_dir:
             report_action_html = ""
             if report_regen_enabled:
                 report_action_html = (
-                    f'<span class="report-action"><button type="button" disabledonclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps(label + " report")})\' '
+                    f'<span class="report-action"><button type="button" onclick=\'startReportRegen(this, {json.dumps(report_results_dir)}, {json.dumps(label + " report")})\' '
                     'style="margin-left:6px;padding:4px 8px;border:1px solid #c7d0d9;border-radius:8px;background:#fff;cursor:pointer;">'
                     'Re-run</button><span class="report-status" style="margin-left:6px;font-size:11px;"></span></span>'
                 )

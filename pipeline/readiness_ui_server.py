@@ -2,7 +2,6 @@
 """Serve a Flask UI for running the readiness pipeline and browsing results."""
 
 import json
-import hmac
 import math
 import os
 import shutil
@@ -53,7 +52,6 @@ ARCHIVE_REFRESH_LOCK = threading.Lock()
 ARCHIVE_REFRESH_CACHE: Dict[str, Dict[str, Any]] = {}
 ARCHIVE_REFRESH_EVENTS: Dict[str, threading.Event] = {}
 
-MUTATING_ENDPOINTS = {"run", "reweight", "report", "stop", "fs_list"}
 ARTIFACT_ROOT_PREFIXES = ("results",)
 WEIGHT_SUM_TOLERANCE = 1e-3
 MIN_KEYPOINT_STRIDE = 1
@@ -69,12 +67,11 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
-PUBLIC_MODE = _env_bool("PUBLIC_MODE", False)
-ENABLE_FULL_PIPELINE = _env_bool("ENABLE_FULL_PIPELINE", not PUBLIC_MODE)
-ENABLE_REEVALUATION = _env_bool("ENABLE_REEVALUATION", not PUBLIC_MODE)
-ENABLE_REPORT_REGEN = _env_bool("ENABLE_REPORT_REGEN", not PUBLIC_MODE)
-ENABLE_FS_BROWSER = _env_bool("ENABLE_FS_BROWSER", False if PUBLIC_MODE else True)
-APP_API_TOKEN = os.getenv("APP_API_TOKEN", "").strip()
+PUBLIC_MODE = _env_bool("PUBLIC_MODE", True)
+ENABLE_FULL_PIPELINE = _env_bool("ENABLE_FULL_PIPELINE", False)
+ENABLE_REEVALUATION = _env_bool("ENABLE_REEVALUATION", False)
+ENABLE_REPORT_REGEN = _env_bool("ENABLE_REPORT_REGEN", False)
+ENABLE_FS_BROWSER = _env_bool("ENABLE_FS_BROWSER", False)
 
 _raw_fs_roots = os.getenv("FS_BROWSER_ROOTS", "").strip()
 if _raw_fs_roots:
@@ -234,26 +231,6 @@ def _path_within(path: Path, root: Path) -> bool:
         return True
     except Exception:
         return False
-
-
-def _extract_request_token() -> str:
-    """Extract bearer/API-key token from request headers."""
-    auth = str(request.headers.get("Authorization", "")).strip()
-    if auth.lower().startswith("bearer "):
-        return auth[7:].strip()
-    return str(request.headers.get("X-API-Key", "")).strip()
-
-
-def _require_api_token(endpoint_name: str) -> Optional[Response]:
-    """Enforce token auth for mutating endpoints when configured."""
-    if endpoint_name not in MUTATING_ENDPOINTS:
-        return None
-    if not APP_API_TOKEN:
-        return None
-    provided = _extract_request_token()
-    if provided and hmac.compare_digest(provided, APP_API_TOKEN):
-        return None
-    return jsonify({"ok": False, "error": "Unauthorized"}), 401
 
 
 def _feature_disabled(msg: str) -> Response:
@@ -1579,7 +1556,6 @@ def _fallback_heatmap_html() -> str:
 def ui_index() -> Response:
     """Serve the main Flask UI with pipeline controls and dashboard iframe."""
     default_bag = (_load_json(DEFAULT_CONFIG).get("bag_file") or "")
-    requires_api_token = "true" if APP_API_TOKEN else "false"
     enable_full_pipeline = "true" if ENABLE_FULL_PIPELINE else "false"
     enable_reevaluation = "true" if ENABLE_REEVALUATION else "false"
     enable_report_regen = "true" if ENABLE_REPORT_REGEN else "false"
@@ -1754,28 +1730,23 @@ def ui_index() -> Response:
         <div id="pipelineDisabledNotice" class="notice hidden">
           Full rosbag processing is disabled in this deployment.
         </div>
-        <div class="row" id="tokenRow">
-          <label>API Token (if required by deployment)</label>
-          <input id="apiToken" type="password" placeholder="Paste token to run/stop/re-evaluate endpoints" />
-          <div class="hint">Token is stored in this browser only.</div>
-        </div>
         <div class="row">
           <label>Rosbag Path</label>
           <div class="inline">
-            <input id="bag_file" value="{default_bag}" />
-            <button id="browseBtn" type="button" onclick="openBrowser() disabled">Browse...</button>
+            <input id="bag_file" value="{default_bag}" disabled />
+            <button id="browseBtn" type="button" onclick="openBrowser()" disabled>Browse...</button>
             <button id="localDialogBtn" type="button" onclick="openLocalDialog()" disabled>Local Dialog</button>
             <input id="bag_picker" type="file" webkitdirectory directory multiple class="hidden" onchange="handleLocalDialog(event)" />
           </div>
         </div>
-        <div class="row"><label>Frame Stride</label><input id="frame_stride" value="10"/></div>
-        <div id="browseHint" class="hint">Use <b>Browse...</b> for server-side filesystem path selection. Browser local dialog is kept for convenience but does not provide reliable absolute server path.</div>
+        <div class="row"><label>Frame Stride</label><input id="frame_stride" value="10" disabled /></div>
+        <div id="browseHint" class="hint">This public deployment is view-only. Raw rosbag processing and server filesystem browsing are disabled.</div>
         <hr/>
         <div class="notice" style="margin-top:8px;">
-          Reweight parameters are configured in the <b>Road Readiness Dashboard</b> tab using validated sliders and numeric inputs.
+          Public Render deployment serves precomputed readiness artifacts only.
         </div>
         <div class="row inline" style="margin-top:10px;">
-          <button id="startBtn" onclick="startRun() disabled">Start Pipeline</button>
+          <button id="startBtn" onclick="startRun()" disabled>Start Pipeline</button>
           <button id="stopBtn" onclick="stopRun()" disabled>Stop Pipeline</button>
         </div>
         <div class="status" style="margin-top:8px;">
@@ -1799,10 +1770,10 @@ def ui_index() -> Response:
           <label style="margin:0;">Archived Run</label>
           <select id="runSelect" style="max-width:420px;"></select>
           <button onclick="loadSelectedRun()">Load</button>
-          <button id="reweightBtn" onclick="startReweightFromSelected() disabled">Re-evaluate Selected</button>
-          <span class="badge" id="reportBadge">Report enabled</span>
+          <button id="reweightBtn" onclick="startReweightFromSelected()" disabled>Re-evaluate Selected</button>
+          <span class="badge" id="reportBadge">View-only</span>
         </div>
-        <details id="reweightShell" class="reweight-shell">
+        <details id="reweightShell" class="reweight-shell hidden">
           <summary>
             <span>Reweight Controls</span>
             <span id="reweightQuickStatus" class="badge">w=1.00 | m=1.00</span>
@@ -1884,7 +1855,7 @@ def ui_index() -> Response:
       <div class="dash-wrap">
         <div class="dash-toolbar">
           <div style="font-weight:600;color:#18364d;">All evaluations in one map view</div>
-          <button onclick="ensureAllEvaluationsLoaded(true)">Refresh</button>
+          <button onclick="ensureAllEvaluationsLoaded(true)" disabled>Refresh</button>
         </div>
         <div class="dash-view">
           <div id="allDashLoading" class="dash-loading">
@@ -1906,8 +1877,8 @@ def ui_index() -> Response:
   <div class="modal">
     <div class="modal-head">
       <input id="browserPath" class="mono" style="flex:1;" />
-      <button onclick="goBrowserPath() disabled">Go</button>
-      <button onclick="selectCurrentPath()">Select This Folder</button>
+      <button onclick="goBrowserPath()" disabled>Go</button>
+      <button onclick="selectCurrentPath()" disabled>Select This Folder</button>
       <button onclick="closeBrowser()">Close</button>
     </div>
     <div class="modal-body" id="browserList"></div>
@@ -1916,7 +1887,6 @@ def ui_index() -> Response:
 
 <script>
 const APP_CONFIG = {{
-  requiresApiToken: {requires_api_token},
   enableFullPipeline: {enable_full_pipeline},
   enableReevaluation: {enable_reevaluation},
   enableReportRegen: {enable_report_regen},
@@ -2139,39 +2109,22 @@ function toggleLogs() {{
 }}
 
 function getApiToken() {{
-  const input = document.getElementById('apiToken');
-  const raw = (input ? input.value : '') || window.localStorage.getItem('readiness_api_token') || '';
-  return raw.trim();
+  return '';
 }}
 
 function saveApiToken() {{
-  const token = getApiToken();
-  if (token) {{
-    window.localStorage.setItem('readiness_api_token', token);
-  }} else {{
-    window.localStorage.removeItem('readiness_api_token');
-  }}
 }}
 
 function requireTokenIfNeeded() {{
-  if (!APP_CONFIG.requiresApiToken) return true;
-  if (getApiToken()) return true;
-  alert('This deployment requires an API token for this action.');
   return false;
 }}
 
 function jsonHeaders() {{
-  const h = {{ 'Content-Type': 'application/json' }};
-  const token = getApiToken();
-  if (token) h['Authorization'] = 'Bearer ' + token;
-  return h;
+  return {{ 'Content-Type': 'application/json' }};
 }}
 
 function requestHeaders() {{
-  const h = {{}};
-  const token = getApiToken();
-  if (token) h['Authorization'] = 'Bearer ' + token;
-  return h;
+  return {{}};
 }}
 
 function applyDeploymentMode() {{
@@ -2184,11 +2137,6 @@ function applyDeploymentMode() {{
     parts.push(APP_CONFIG.enableReportRegen ? 'Report regeneration enabled' : 'Report regeneration disabled');
     summary.textContent = parts.join(' | ');
   }}
-
-  const tokenInput = document.getElementById('apiToken');
-  const storedToken = window.localStorage.getItem('readiness_api_token') || '';
-  if (tokenInput && storedToken && !tokenInput.value) tokenInput.value = storedToken;
-  if (tokenInput) tokenInput.addEventListener('change', saveApiToken);
 
   if (!APP_CONFIG.enableFullPipeline) {{
     const notice = document.getElementById('pipelineDisabledNotice');
@@ -2221,7 +2169,7 @@ function applyDeploymentMode() {{
 
   const reportBadge = document.getElementById('reportBadge');
   if (reportBadge) {{
-    reportBadge.textContent = APP_CONFIG.enableReportRegen ? 'Report enabled' : 'View-only';
+    reportBadge.textContent = 'View-only';
   }}
   updateReweightValidation();
 }}
@@ -2583,9 +2531,6 @@ def api_runs() -> Response:
 @app.post("/api/run")
 def api_run() -> Response:
     """Start a full pipeline run from the posted UI parameters."""
-    auth_err = _require_api_token("run")
-    if auth_err is not None:
-        return auth_err
     if not ENABLE_FULL_PIPELINE:
         return _feature_disabled("Full rosbag pipeline is disabled on this deployment.")
 
@@ -2602,9 +2547,6 @@ def api_run() -> Response:
 @app.post("/api/reweight")
 def api_reweight() -> Response:
     """Start a reweight-only run from the posted UI parameters."""
-    auth_err = _require_api_token("reweight")
-    if auth_err is not None:
-        return auth_err
     if not ENABLE_REEVALUATION:
         return _feature_disabled("Re-evaluation is disabled on this deployment.")
 
@@ -2621,9 +2563,6 @@ def api_reweight() -> Response:
 @app.post("/api/report")
 def api_report() -> Response:
     """Start a report-only regeneration run."""
-    auth_err = _require_api_token("report")
-    if auth_err is not None:
-        return auth_err
     if not ENABLE_REPORT_REGEN:
         return _feature_disabled("Report regeneration is disabled on this deployment.")
 
@@ -2640,10 +2579,6 @@ def api_report() -> Response:
 @app.post("/api/stop")
 def api_stop() -> Response:
     """Request cancellation of the currently running pipeline task."""
-    auth_err = _require_api_token("stop")
-    if auth_err is not None:
-        return auth_err
-
     try:
         return jsonify(_request_stop())
     except Exception as exc:
@@ -2653,9 +2588,6 @@ def api_stop() -> Response:
 @app.get("/api/fs/list")
 def api_fs_list() -> Response:
     """List server-side directories for the bag-file browser dialog."""
-    auth_err = _require_api_token("fs_list")
-    if auth_err is not None:
-        return auth_err
     if not ENABLE_FS_BROWSER:
         return _feature_disabled("Filesystem browser is disabled on this deployment.")
 

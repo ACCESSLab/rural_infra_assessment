@@ -20,22 +20,16 @@ The UI server now supports deployment flags:
 
 - `PUBLIC_MODE=true`
 - `ENABLE_FULL_PIPELINE=false` (disables rosbag processing endpoint)
-- `ENABLE_REEVALUATION=true` (keeps re-evaluation endpoint enabled)
-- `ENABLE_REPORT_REGEN=false` (skip report generation on re-evaluation)
+- `ENABLE_REEVALUATION=false` (disables re-evaluation endpoint)
+- `ENABLE_REPORT_REGEN=false` (disables report regeneration endpoint)
 - `ENABLE_FS_BROWSER=false` (disables server directory browsing endpoint)
-- `APP_API_TOKEN` optional bearer token to protect mutating endpoints
 
 Public-facing UX hardening now included:
 
-- Reweight controls use slider + numeric inputs with live validation.
-- Client-side checks block invalid submissions before API calls.
-- Server-side checks enforce:
-  - `w1 + w2 = 1.0`
-  - `m1 + m2 + m3 = 1.0`
-  - `keypoint_stride` in `[1, 200]`
-  - reweight source paths restricted to `results/**`
+- Run-pipeline, re-evaluation, report-regeneration, and filesystem-browse controls are disabled for public viewing.
+- Server-side checks still block mutating endpoints when deployment flags are disabled.
 
-Mutating endpoints protected by optional token:
+Mutating endpoints disabled in the default Render profile:
 
 - `POST /api/run`
 - `POST /api/reweight`
@@ -50,15 +44,12 @@ Artifact serving is restricted to `results/**` paths only.
 1. Push this branch to your remote repository.
 2. Create a new Render Web Service from that repo.
 3. If using Blueprint, let Render detect `render.yaml`.
-4. Set secret env vars in Render dashboard:
-   - `APP_API_TOKEN` (recommended)
-   - `MAPBOX_TOKEN` (if Mapbox basemap is used)
+4. Set `MAPBOX_TOKEN` in the Render dashboard if Mapbox basemap support is used.
 5. Deploy and validate:
    - Dashboard loads
    - Archived/current results load
-   - Re-evaluation works from the UI
+   - Public controls remain view-only
 
 ## Notes
 
-- If you want full rosbag pipeline execution in this deployment, set `ENABLE_FULL_PIPELINE=true` and ensure all pipeline/runtime dependencies and data access paths are available in the Render environment.
-- Report generation can be re-enabled by setting `ENABLE_REPORT_REGEN=true`.
+- The Render deployment is intended for viewing precomputed artifacts only. Keep raw-pipeline execution, re-evaluation, report regeneration, and filesystem browsing disabled for the public app.
